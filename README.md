@@ -27,14 +27,14 @@ pnpm dev
 
 默认访问 [http://localhost:3000](http://localhost:3000)。
 
-`next.config.ts` 会把前端同源请求代理到后端：
+前端通过运行时 Route Handler 把同源请求代理到后端：
 
 ```text
 /api/v1/*  ->  http://localhost:4000/api/v1/*
 /uploads/* ->  http://localhost:4000/uploads/*
 ```
 
-浏览器不会直接跨域请求 API，因此刷新令牌 Cookie、媒体文件和管理页面都不需要额外域名配置。
+`BACKEND_ORIGIN` 在服务端运行时读取，因此部署平台修改环境变量后不需要重新改代码。浏览器不会直接跨域请求 API，刷新令牌 Cookie、媒体文件和管理页面都保持同源。
 
 ## 环境变量
 
@@ -45,6 +45,25 @@ NEXT_PUBLIC_API_BASE_URL=/api/v1
 
 - `BACKEND_ORIGIN` 只在 Next.js 服务端使用。
 - `NEXT_PUBLIC_API_BASE_URL` 会进入浏览器构建产物，生产环境通常保持 `/api/v1`。
+
+## 部署到 Netlify
+
+当前应用使用 Next.js Route Handler 代理后端，不能使用纯静态导出。Netlify 需要启用 Next.js Runtime，仓库已包含 `netlify.toml` 和 `@netlify/plugin-nextjs`。
+
+在 Netlify 的 **Site configuration → Environment variables** 配置：
+
+```env
+BACKEND_ORIGIN=https://api.example.com
+NEXT_PUBLIC_API_BASE_URL=/api/v1
+```
+
+- `BACKEND_ORIGIN` 填独立后端的公网 HTTPS 地址，不包含最后的 `/api/v1`。
+- 保持 `NEXT_PUBLIC_API_BASE_URL=/api/v1`，浏览器请求会经过 Netlify Function 代理。
+- 不要把它改成后端裸域名，否则刷新 Cookie 会变成跨站 Cookie，可能被浏览器拦截。
+- Netlify 域名应该配置在后台的 `CORS_ORIGINS` 中。
+- 后端必须使用 HTTPS，并设置 `COOKIE_SECURE=true`。
+
+修改环境变量后需要重新部署，因为 Netlify Function 的运行环境会在新部署中更新。
 
 ## 认证模型
 
