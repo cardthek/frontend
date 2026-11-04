@@ -34,6 +34,7 @@ yarn-error.log*
 .env*
 !.env.example
 !.env.netlify.example
+!.env.direct.example
 
 # vercel
 .vercel

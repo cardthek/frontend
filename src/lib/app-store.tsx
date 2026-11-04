@@ -17,6 +17,7 @@ import {
   toApiError,
   type AuthSession,
 } from "@/lib/api-client";
+import { resolveBackendUrl } from "@/lib/backend-config";
 import type {
   AdminCardInput,
   AdminUserInput,
@@ -204,6 +205,7 @@ const AppStoreContext = createContext<AppStoreValue | null>(null);
 function normalizeMedia(asset: MediaAsset): MediaAsset {
   return {
     ...asset,
+    preview: resolveBackendUrl(asset.preview),
     tone: asset.tone ?? "sand",
     pattern: asset.pattern ?? "orbit",
   };

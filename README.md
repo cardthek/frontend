@@ -39,12 +39,15 @@ pnpm dev
 ## 环境变量
 
 ```env
+NEXT_PUBLIC_USE_BACKEND_PROXY=true
 BACKEND_ORIGIN=http://localhost:4000
 NEXT_PUBLIC_API_BASE_URL=/api/v1
 ```
 
+- `NEXT_PUBLIC_USE_BACKEND_PROXY=true`：浏览器请求 `/api/v1`，由 Next.js Route Handler 转发后端。
+- `NEXT_PUBLIC_USE_BACKEND_PROXY=false`：浏览器直接请求 `NEXT_PUBLIC_API_BASE_URL`，必须填写完整后端 URL。
 - `BACKEND_ORIGIN` 只在 Next.js 服务端使用。
-- `NEXT_PUBLIC_API_BASE_URL` 会进入浏览器构建产物，生产环境通常保持 `/api/v1`。
+- `NEXT_PUBLIC_API_BASE_URL` 会进入浏览器构建产物。
 
 ## 部署到 Netlify
 
@@ -52,19 +55,40 @@ NEXT_PUBLIC_API_BASE_URL=/api/v1
 
 由于 `frontend` 是独立 Git 仓库，在 Netlify 中应直接导入该仓库，并将 **Base directory** 留空或填写 `./`。只有导入包含 `frontend` 与 `backend` 的 monorepo 时，才需要填写 `frontend`。
 
-在 Netlify 的 **Site configuration → Environment variables** 配置：
+### 模式一：通过 Netlify 反代后端
+
+这是默认和推荐模式。在 Netlify 的 **Site configuration → Environment variables** 配置：
 
 ```env
+NEXT_PUBLIC_USE_BACKEND_PROXY=true
 BACKEND_ORIGIN=https://api.example.com
 NEXT_PUBLIC_API_BASE_URL=/api/v1
 ```
 
 - `BACKEND_ORIGIN` 填独立后端的公网 HTTPS 地址，不包含最后的 `/api/v1`。
 - 保持 `NEXT_PUBLIC_API_BASE_URL=/api/v1`，浏览器请求会经过 Netlify Function 代理。
-- 不要把它改成后端裸域名，否则刷新 Cookie 会变成跨站 Cookie，可能被浏览器拦截。
 - Netlify 域名应该配置在后台的 `CORS_ORIGINS` 中。
 - 后端必须使用 HTTPS，并设置 `COOKIE_SECURE=true`。
 - `BACKEND_ORIGIN` 是公开端点地址而不是密钥，因此 `netlify.toml` 只对该环境变量关闭秘密扫描；不要用同样方式绕过 JWT 密钥或访问令牌。
+
+### 模式二：浏览器直连后端
+
+不经过 Netlify Function 时配置：
+
+```env
+NEXT_PUBLIC_USE_BACKEND_PROXY=false
+NEXT_PUBLIC_API_BASE_URL=https://card.yurik.cafe/api/v1
+```
+
+后端还必须配置：
+
+```env
+CORS_ORIGINS=https://cardthek.com,https://www.cardthek.com
+COOKIE_SECURE=true
+COOKIE_SAME_SITE=none
+```
+
+直连模式下 API 和卡面图片都会直接访问后端域名。由于刷新 Cookie 属于第三方 Cookie，部分浏览器或隐私设置可能拦截登录会话恢复，因此生产环境优先推荐反代模式。
 
 修改环境变量后需要重新部署，因为 Netlify Function 的运行环境会在新部署中更新。
 

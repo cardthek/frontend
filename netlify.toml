@@ -6,7 +6,7 @@
   NODE_VERSION = "22"
   NETLIFY_NEXT_PLUGIN_SKIP = "false"
   # This is a public endpoint URL, not a credential.
-  SECRETS_SCAN_OMIT_KEYS = "BACKEND_ORIGIN"
+  SECRETS_SCAN_OMIT_KEYS = "BACKEND_ORIGIN,NEXT_PUBLIC_API_BASE_URL"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

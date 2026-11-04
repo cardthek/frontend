@@ -1,4 +1,4 @@
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/v1").replace(/\/$/, "");
+import { API_BASE, backendConfigError } from "@/lib/backend-config";
 
 let accessToken: string | null = null;
 let refreshPromise: Promise<AuthSession | null> | null = null;
@@ -77,6 +77,9 @@ export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<ApiEnvelope<T>> {
+  if (backendConfigError) {
+    throw new ApiError(500, "BACKEND_CONFIG_ERROR", backendConfigError);
+  }
   const {
     body,
     auth = true,
@@ -126,6 +129,7 @@ export async function apiRequest<T>(
 
 export async function refreshAccessToken() {
   if (refreshPromise) return refreshPromise;
+  if (backendConfigError) return null;
   refreshPromise = (async () => {
     try {
       const response = await fetch(`${API_BASE}/auth/refresh`, {
