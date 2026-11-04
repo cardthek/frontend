@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { profileVisibilityLabel, useAppStore } from "@/lib/app-store";
 import type { ProfileVisibility } from "@/lib/types";
-import { slugify } from "@/lib/utils";
+import { isAsciiSlug } from "@/lib/utils";
 
 export default function ProfilePage() {
   const { currentUser, state, updateProfile } = useAppStore();
@@ -37,8 +37,8 @@ export default function ProfilePage() {
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
-    const slug = slugify(form.slug || form.username);
-    if (!slug) return toast.error("请输入有效主页地址");
+    const slug = (form.slug || form.username).trim().toLowerCase();
+    if (!isAsciiSlug(slug)) return toast.error("主页 slug 只能包含小写英文字母、数字和单个连字符");
     const result = await updateProfile({
       displayName: form.displayName,
       slug,
@@ -70,7 +70,7 @@ export default function ProfilePage() {
             <div><Label htmlFor="displayName">显示名称</Label><Input id="displayName" value={form.displayName} onChange={(event) => update("displayName", event.target.value)} /></div>
             <div><Label htmlFor="username">用户名</Label><div className="relative"><AtSign className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="username" value={form.username} disabled className="pl-10" /></div><p className="mt-1.5 text-[0.65rem] text-muted-foreground">用户名由管理员在用户编辑页修改。</p></div>
             <div><Label htmlFor="email">邮箱</Label><Input id="email" type="email" value={form.email} disabled /><p className="mt-1.5 text-[0.65rem] text-muted-foreground">邮箱由管理员在用户编辑页修改。</p></div>
-            <div><Label htmlFor="slug">主页地址</Label><div className="flex items-center rounded-pill border border-input bg-card pl-4"><span className="text-xs text-muted-foreground">/u/</span><input id="slug" value={form.slug} onChange={(event) => update("slug", event.target.value)} className="h-11 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none" /></div></div>
+            <div><Label htmlFor="slug">主页地址</Label><div className="flex items-center rounded-pill border border-input bg-card pl-4"><span className="text-xs text-muted-foreground">/u/</span><input id="slug" value={form.slug} onChange={(event) => update("slug", event.target.value)} className="h-11 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none" /></div><p className="mt-1.5 text-[0.65rem] text-muted-foreground">仅限小写 ASCII 字母、数字和单连字符。</p></div>
           </div>
 
           <div className="mt-5"><Label htmlFor="bio">个人简介</Label><Textarea id="bio" value={form.bio} onChange={(event) => update("bio", event.target.value)} maxLength={180} /><p className="mt-1.5 text-right text-[0.65rem] text-muted-foreground">{form.bio.length} / 180</p></div>

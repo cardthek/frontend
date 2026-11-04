@@ -135,7 +135,9 @@ interface AppStoreValue {
   changePassword: (userId: number, password: string) => Promise<StoreResult>;
   updateUser: (userId: number, patch: Partial<User>) => Promise<void>;
   addDictionaryItem: (
-    item: Omit<DictionaryItem, "id" | "slug" | "active">,
+    item: Omit<DictionaryItem, "id" | "slug" | "active"> & {
+      slug?: string;
+    },
   ) => Promise<StoreResult>;
   updateDictionaryItem: (
     id: string,
@@ -880,7 +882,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const addDictionaryItem = useCallback(
     async (
-      item: Omit<DictionaryItem, "id" | "slug" | "active">,
+      item: Omit<DictionaryItem, "id" | "slug" | "active"> & {
+        slug?: string;
+      },
     ): Promise<StoreResult> => {
       try {
         await apiRequest("/dictionaries", {
@@ -889,6 +893,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
             type: item.type,
             parentId: item.parentId,
             label: item.label,
+            ...(item.slug ? { slug: item.slug } : {}),
             description: item.description ?? "",
           },
         });

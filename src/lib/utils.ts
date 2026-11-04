@@ -24,11 +24,19 @@ export function initials(name: string) {
   return name.trim().slice(0, 2).toUpperCase();
 }
 
+export const ASCII_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export function isAsciiSlug(value: string) {
+  return ASCII_SLUG_PATTERN.test(value);
+}
+
 export function slugify(value: string) {
   return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
 

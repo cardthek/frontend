@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/app-store";
 import type { Card, DictionaryItem, DictionaryType } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, isAsciiSlug, slugify } from "@/lib/utils";
 
 const typeLabels: Record<DictionaryType, { label: string; note: string }> = {
   issuer: { label: "发行方", note: "银行与发卡机构" },
@@ -24,6 +24,12 @@ const typeLabels: Record<DictionaryType, { label: string; note: string }> = {
 };
 
 const types = Object.keys(typeLabels) as DictionaryType[];
+const slugPrefixes: Record<DictionaryType, string> = {
+  issuer: "issuer",
+  network: "network",
+  cardType: "type",
+  level: "level",
+};
 const fieldByType: Record<DictionaryType, keyof Card> = {
   issuer: "issuerId",
   network: "networkId",
@@ -49,6 +55,7 @@ function DictionaryManagement() {
   const [type, setType] = useState<DictionaryType>("issuer");
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
+  const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [parentId, setParentId] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -67,26 +74,38 @@ function DictionaryManagement() {
   async function add() {
     if (!label.trim()) return toast.error("请填写字典项名称");
     if (type === "level" && !parentId) return toast.error("请选择等级所属卡组织");
+    const normalizedSlug = slug.trim().toLowerCase();
+    if (normalizedSlug && !isAsciiSlug(normalizedSlug)) {
+      return toast.error("slug 只能包含小写英文字母、数字和单个连字符");
+    }
+    if (!normalizedSlug && !slugify(label)) {
+      return toast.error("中文名称无法自动生成 slug，请填写英文 slug");
+    }
     const result = await addDictionaryItem({
       type,
       parentId: type === "level" ? parentId : undefined,
       label: label.trim(),
+      slug: normalizedSlug || undefined,
       description: description.trim() || undefined,
     });
     if (!result.ok) return toast.error(result.message);
     setLabel("");
+    setSlug("");
     setDescription("");
     setParentId("");
     toast.success(result.message);
   }
 
   function startEdit(item: DictionaryItem) {
+    const prefix = `${slugPrefixes[item.type]}-`;
     setEditingId(item.id);
     setEditForm({
       type: item.type,
       parentId: item.parentId ?? "",
       label: item.label,
-      slug: item.slug,
+      slug: item.slug.startsWith(prefix)
+        ? item.slug.slice(prefix.length)
+        : item.slug,
       description: item.description ?? "",
       active: item.active,
     });
@@ -94,8 +113,13 @@ function DictionaryManagement() {
 
   async function saveEdit(item: DictionaryItem) {
     if (!editForm) return;
+    const normalizedSlug = editForm.slug.trim().toLowerCase();
+    if (!isAsciiSlug(normalizedSlug)) {
+      return toast.error("slug 只能包含小写英文字母、数字和单个连字符");
+    }
     const result = await updateDictionaryItem(item.id, {
       ...editForm,
+      slug: normalizedSlug,
       parentId: editForm.type === "level" ? editForm.parentId : undefined,
     });
     if (!result.ok) return toast.error(result.message);
@@ -140,7 +164,7 @@ function DictionaryManagement() {
 
         <section className="paper-panel overflow-hidden">
           <div className="border-b border-border/70 p-5 md:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="label-caps">Add Entry</p><h2 className="mt-2 font-serif text-2xl font-bold">新增{typeLabels[type].label}</h2></div><Badge variant="outline">slug 自动生成</Badge></div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="label-caps">Add Entry</p><h2 className="mt-2 font-serif text-2xl font-bold">新增{typeLabels[type].label}</h2></div><Badge variant="outline">固定前缀 {slugPrefixes[type]}-</Badge></div>
             {type === "level" && (
               <div className="mt-4">
                 <span className="mb-1.5 block text-xs font-semibold">所属卡组织 *</span>
@@ -148,8 +172,12 @@ function DictionaryManagement() {
                 <p className="mt-2 text-[0.65rem] text-muted-foreground">等级名称只会在所属卡组织下出现。</p>
               </div>
             )}
-            <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]">
+            <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_auto]">
               <Input value={label} onChange={(event) => setLabel(event.target.value)} placeholder={`${typeLabels[type].label}名称`} />
+              <div className="flex h-11 items-center rounded-pill border border-input bg-card pl-4">
+                <span className="shrink-0 font-mono text-xs text-muted-foreground">{slugPrefixes[type]}-</span>
+                <input value={slug} onChange={(event) => setSlug(event.target.value)} placeholder="custom-slug" className="h-full min-w-0 flex-1 bg-transparent px-1 font-mono text-xs outline-none" />
+              </div>
               <Input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="可选说明" />
               <Button onClick={add}><Plus className="size-4" />添加</Button>
             </div>
@@ -168,7 +196,7 @@ function DictionaryManagement() {
                         <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold">编辑「{item.label}」</p><Button variant="ghost" size="icon" onClick={() => { setEditingId(null); setEditForm(null); }} aria-label="取消编辑"><X className="size-4" /></Button></div>
                         <div className="mt-3 grid gap-3 sm:grid-cols-2">
                           <div><span className="mb-1.5 block text-xs font-semibold">名称</span><Input value={editForm.label} onChange={(event) => setEditForm({ ...editForm, label: event.target.value })} /></div>
-                          <div><span className="mb-1.5 block text-xs font-semibold">Slug</span><Input value={editForm.slug} onChange={(event) => setEditForm({ ...editForm, slug: event.target.value })} className="font-mono text-xs" /></div>
+                          <div><span className="mb-1.5 block text-xs font-semibold">Slug</span><div className="flex h-11 items-center rounded-pill border border-input bg-card pl-4"><span className="shrink-0 font-mono text-xs text-muted-foreground">{slugPrefixes[editForm.type]}-</span><input value={editForm.slug} onChange={(event) => setEditForm({ ...editForm, slug: event.target.value })} className="h-full min-w-0 flex-1 bg-transparent px-1 font-mono text-xs outline-none" /></div></div>
                           <div><span className="mb-1.5 block text-xs font-semibold">分类</span><Select value={editForm.type} onChange={(event) => setEditForm({ ...editForm, type: event.target.value as DictionaryType })} disabled={usage > 0}>{types.map((dictionaryType) => <option key={dictionaryType} value={dictionaryType}>{typeLabels[dictionaryType].label}</option>)}</Select>{usage > 0 && <p className="mt-1 text-[0.62rem] text-muted-foreground">已有 {usage} 张卡片引用，不能修改分类。</p>}</div>
                           <div className="self-start">
                             <span className="mb-2 block text-xs font-semibold">启用状态</span>

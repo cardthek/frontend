@@ -16,7 +16,12 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/app-store";
 import type { AdminUserInput, User } from "@/lib/types";
-import { formatDate, isNumericUsername, slugify } from "@/lib/utils";
+import {
+  formatDate,
+  isAsciiSlug,
+  isNumericUsername,
+  slugify,
+} from "@/lib/utils";
 
 const tones: User["avatarTone"][] = ["sand", "sage", "clay", "forest"];
 
@@ -64,6 +69,7 @@ export function AdminUserForm({ user }: { user?: User }) {
     if (isNumericUsername(form.username)) return "用户名不能是纯数字";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return "请输入有效邮箱地址";
     if (!form.slug.trim()) return "请填写公开主页 slug";
+    if (!isAsciiSlug(form.slug.trim().toLowerCase())) return "主页 slug 只能包含小写英文字母、数字和单个连字符";
     if (form.roleIds.length !== 1 || !selectedRole) return "请选择一个有效用户组";
     if (!form.joinedAt || Number.isNaN(new Date(`${form.joinedAt}T00:00:00.000Z`).getTime())) return "请选择有效加入日期";
     return null;
@@ -149,7 +155,7 @@ export function AdminUserForm({ user }: { user?: User }) {
               <div><Label htmlFor="displayName">显示名称 *</Label><Input id="displayName" value={form.displayName} onChange={(event) => updateDisplayName(event.target.value)} placeholder="例如：林屿" /></div>
               <div><Label htmlFor="username">用户名 *</Label><div className="relative"><AtSign className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="username" value={form.username} onChange={(event) => update("username", event.target.value)} className="pl-10" placeholder="例如：lin" /></div><p className="mt-2 text-[0.65rem] text-muted-foreground">不能是纯数字，用于登录和 @ 展示。</p></div>
               <div><Label htmlFor="email">邮箱 *</Label><Input id="email" type="email" value={form.email} onChange={(event) => update("email", event.target.value)} placeholder="name@example.com" /></div>
-              <div><Label htmlFor="slug">公开主页 slug *</Label><Input id="slug" value={form.slug} onChange={(event) => { setSlugTouched(true); update("slug", event.target.value); }} placeholder="例如：lin-yu" /><p className="mt-2 text-[0.65rem] text-muted-foreground">公开地址：/u/{form.slug || "your-slug"}</p></div>
+              <div><Label htmlFor="slug">公开主页 slug *</Label><Input id="slug" value={form.slug} onChange={(event) => { setSlugTouched(true); update("slug", event.target.value); }} placeholder="例如：lin-yu" /><p className="mt-2 text-[0.65rem] text-muted-foreground">仅限小写 ASCII 字母、数字和单连字符。公开地址：/u/{form.slug || "your-slug"}</p></div>
               <div className="sm:col-span-2"><Label htmlFor="bio">个人简介</Label><Textarea id="bio" value={form.bio} onChange={(event) => update("bio", event.target.value)} placeholder="介绍收藏偏好、研究主题或与卡片相关的经历。" /></div>
             </div>
             <p className="mt-4 rounded-ui bg-surface px-4 py-3 text-xs leading-5 text-muted-foreground">密码会由后端进行安全哈希存储；后台创建用户时必须设置初始密码。</p>

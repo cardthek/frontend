@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/lib/app-store";
 import type { PermissionKey, Role } from "@/lib/types";
-import { cn, slugify } from "@/lib/utils";
+import { cn, isAsciiSlug, slugify } from "@/lib/utils";
 
 export default function AdminRolesPage() {
   return (
@@ -34,7 +34,12 @@ function RoleManagement() {
 
   async function addRole() {
     if (!canUpdate) return;
-    const result = await createRole(newName, newSlug, newDescription);
+    if (!newName.trim()) return toast.error("用户组名称不能为空");
+    const normalizedSlug = (newSlug.trim() || slugify(newName)).toLowerCase();
+    if (!isAsciiSlug(normalizedSlug)) {
+      return toast.error("slug 只能包含小写英文字母、数字和单个连字符");
+    }
+    const result = await createRole(newName.trim(), normalizedSlug, newDescription.trim());
     if (!result.ok) return toast.error(result.message);
     setNewName("");
     setNewSlug("");
@@ -108,8 +113,8 @@ function RoleEditor({ role, canUpdate, onDelete }: { role: Role; canUpdate: bool
   async function save() {
     if (!canUpdate || locked) return;
     if (!name.trim()) return toast.error("用户组名称不能为空");
-    const normalizedSlug = slugify(slug.trim() || name);
-    if (!normalizedSlug) return toast.error("请填写有效用户组 slug");
+    const normalizedSlug = (slug.trim() || slugify(name)).toLowerCase();
+    if (!isAsciiSlug(normalizedSlug)) return toast.error("slug 只能包含小写英文字母、数字和单个连字符");
     if (state.roles.some((candidate) => candidate.id !== role.id && candidate.slug.toLowerCase() === normalizedSlug.toLowerCase())) return toast.error("用户组 slug 已存在");
     try {
       await updateRole(role.id, { name: name.trim(), slug: normalizedSlug, description: description.trim(), permissions });
@@ -128,7 +133,7 @@ function RoleEditor({ role, canUpdate, onDelete }: { role: Role; canUpdate: bool
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-3">
           <label><span className="mb-2 block text-xs font-semibold">用户组名称</span><Input value={name} onChange={(event) => setName(event.target.value)} disabled={!canUpdate || locked} /></label>
-          <label><span className="mb-2 block text-xs font-semibold">Slug</span><Input value={slug} onChange={(event) => setSlug(event.target.value)} className="font-mono text-xs" disabled={!canUpdate || role.isSystem} /><span className="mt-1 block text-[0.6rem] text-muted-foreground">可读地址标识，不是 UUID。</span></label>
+          <label><span className="mb-2 block text-xs font-semibold">Slug</span><Input value={slug} onChange={(event) => setSlug(event.target.value)} className="font-mono text-xs" disabled={!canUpdate} /><span className="mt-1 block text-[0.6rem] text-muted-foreground">仅限小写 ASCII 字母、数字和单连字符。</span></label>
           <label><span className="mb-2 block text-xs font-semibold">用户组说明</span><Input value={description} onChange={(event) => setDescription(event.target.value)} disabled={!canUpdate || locked} /></label>
         </div>
         {locked && <p className="mt-3 flex items-center gap-2 rounded-ui bg-surface px-3 py-2 text-xs text-muted-foreground"><LockKeyhole className="size-3.5" />超级管理员始终拥有全部权限，避免站点被锁死。</p>}
