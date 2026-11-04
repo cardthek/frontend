@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { CardPreview } from "@/components/cards/card-preview";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import { themeName, themeOptions } from "@/lib/theme";
 import type { ThemeId } from "@/lib/types";
 import { cn, isNumericUsername } from "@/lib/utils";
@@ -21,7 +21,7 @@ const steps = ["站点信息", "管理员", "主题样式", "完成安装"];
 
 export default function SetupPage() {
   const router = useRouter();
-  const { state, completeSetup, setTheme } = useDemoStore();
+  const { state, completeSetup, setTheme } = useAppStore();
   const [step, setStep] = useState(0);
   const [siteName, setSiteName] = useState("卡迹");
   const [tagline, setTagline] = useState("把银行卡当作一页小小的设计档案");
@@ -34,7 +34,7 @@ export default function SetupPage() {
   function next() {
     if (step === 0 && !siteName.trim()) return toast.error("请填写站点名称");
     if (step === 1) {
-      if (!displayName.trim() || !username.trim() || !email.trim() || password.length < 8) return toast.error("请完整填写管理员信息，密码至少 8 个字符");
+      if (!displayName.trim() || !username.trim() || !email.trim() || password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) return toast.error("请完整填写管理员信息，密码至少 8 个字符并包含字母和数字");
       if (isNumericUsername(username)) return toast.error("用户名不能是纯数字");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("请输入有效邮箱");
     }
@@ -42,9 +42,19 @@ export default function SetupPage() {
     setStep((current) => Math.min(current + 1, steps.length - 1));
   }
 
-  function install() {
-    completeSetup(siteName.trim(), displayName.trim(), username.trim(), email.trim());
+  async function install() {
+    const result = await completeSetup({
+      siteName: siteName.trim(),
+      tagline: tagline.trim(),
+      siteUrl: window.location.origin,
+      displayName: displayName.trim(),
+      username: username.trim(),
+      email: email.trim(),
+      password,
+      theme,
+    });
     setTheme(theme);
+    if (!result.ok) return toast.error(result.message);
     toast.success("站点初始化完成");
     router.push("/admin");
   }
@@ -55,7 +65,7 @@ export default function SetupPage() {
       <div className="container-page relative max-w-5xl">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3 font-serif text-xl font-bold"><span className="flex size-9 items-center justify-center rounded-[45%_55%_48%_52%] bg-primary text-primary-foreground"><Leaf className="size-4" /></span>卡迹安装向导</Link>
-          {state.settings.installed && <Badge variant="warning">重装演示模式</Badge>}
+          {state.settings.installed && <Badge variant="warning">站点已安装</Badge>}
         </div>
 
         <div className="mx-auto mt-9 max-w-3xl">
@@ -80,7 +90,7 @@ export default function SetupPage() {
                 <div>
                   <span className="flex size-11 items-center justify-center rounded-full bg-surface text-secondary"><Sprout className="size-5" /></span>
                   <h1 className="mt-5 font-serif text-3xl font-bold">建立你的卡面档案室</h1>
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">安装数据仅保存在当前浏览器内存中，刷新后会恢复演示状态。</p>
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">安装程序会创建数据库记录、默认用户组、权限节点和基础字典。</p>
                   <div className="mt-6 space-y-4">
                     <div><Label htmlFor="siteName">站点名称</Label><Input id="siteName" value={siteName} onChange={(event) => setSiteName(event.target.value)} /></div>
                     <div><Label htmlFor="tagline">一句话介绍</Label><Input id="tagline" value={tagline} onChange={(event) => setTagline(event.target.value)} /></div>
@@ -98,7 +108,7 @@ export default function SetupPage() {
                     <div><Label htmlFor="username">用户名</Label><Input id="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="不能是纯数字" /></div>
                   </div>
                   <div className="mt-4"><Label htmlFor="email">邮箱</Label><Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="admin@example.com" /></div>
-                  <div className="mt-4"><Label htmlFor="password">密码</Label><Input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="至少 8 个字符" /></div>
+                  <div className="mt-4"><Label htmlFor="password">密码</Label><Input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="至少 8 个字符，包含字母和数字" /></div>
                 </div>
               )}
 
@@ -106,7 +116,7 @@ export default function SetupPage() {
                 <div>
                   <span className="flex size-11 items-center justify-center rounded-full bg-surface text-secondary"><Palette className="size-5" /></span>
                   <h1 className="mt-5 font-serif text-3xl font-bold">选择初始主题</h1>
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">主题只改变 CSS 变量，不改变页面结构与业务逻辑。之后可以随时在演示控制台切换。</p>
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">主题只改变 CSS 变量，不改变页面结构与业务逻辑。之后可在站点设置中切换。</p>
                   <div className="mt-6 space-y-3">
                     {themeOptions.map((item) => (
                       <button key={item.id} onClick={() => { setThemeChoice(item.id); setTheme(item.id); }} className={cn("flex w-full items-center justify-between rounded-ui border p-4 text-left", theme === item.id ? "border-primary bg-surface" : "border-border hover:bg-surface")}>
@@ -122,14 +132,14 @@ export default function SetupPage() {
                 <div>
                   <span className="flex size-11 items-center justify-center rounded-full bg-success/10 text-success"><Check className="size-5" /></span>
                   <h1 className="mt-5 font-serif text-3xl font-bold">准备完成安装</h1>
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">确认以下信息后，将创建管理员、写入演示站点设置并进入后台。</p>
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">确认以下信息后，将创建管理员、写入站点设置并进入后台。</p>
                   <dl className="mt-6 divide-y divide-border rounded-ui border border-border bg-surface px-4">
                     <Summary label="站点名称" value={siteName} />
                     <Summary label="管理员" value={`${displayName} (@${username})`} />
                     <Summary label="邮箱" value={email} />
                     <Summary label="主题" value={themeName(theme)} />
                   </dl>
-                  <p className="mt-4 flex gap-2 text-xs leading-5 text-muted-foreground"><LockKeyhole className="mt-0.5 size-3.5 shrink-0" />本演示不会把密码写入状态或发送到网络。</p>
+                  <p className="mt-4 flex gap-2 text-xs leading-5 text-muted-foreground"><LockKeyhole className="mt-0.5 size-3.5 shrink-0" />密码只会以安全哈希形式写入后端数据库，不会保存在浏览器。</p>
                 </div>
               )}
 
@@ -150,7 +160,7 @@ export default function SetupPage() {
                 <div className="h-2 w-full rounded-pill bg-border" />
                 <div className="h-2 w-2/3 rounded-pill bg-border" />
               </div>
-              <p className="mt-8 text-[0.65rem] leading-5 text-muted-foreground">安装完成后，示例卡片、角色、字典与审核记录仍会保留，便于继续体验全部后台功能。</p>
+              <p className="mt-8 text-[0.65rem] leading-5 text-muted-foreground">安装完成后可使用刚创建的超级管理员账号进入后台，并开始配置字典、媒体与投稿审核流程。</p>
             </aside>
           </div>
         </Card>

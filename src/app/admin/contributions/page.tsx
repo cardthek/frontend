@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { countryName } from "@/data/countries";
 import { currencyName } from "@/data/currencies";
-import { useDemoStore, useDictionary } from "@/lib/demo-store";
+import { useAppStore, useDictionary } from "@/lib/app-store";
 import type { CardContribution, ContributionChanges } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -44,7 +44,7 @@ export default function AdminContributionsPage() {
 }
 
 function ContributionReview() {
-  const { state, reviewContribution } = useDemoStore();
+  const { state, reviewContribution } = useAppStore();
   const dictionary = useDictionary();
   const [filter, setFilter] = useState<(typeof statusOptions)[number]["value"]>("pending");
   const [selectedId, setSelectedId] = useState(state.contributions.find((item) => item.status === "pending")?.id);
@@ -69,10 +69,10 @@ function ContributionReview() {
     return card[field.key as keyof typeof card] as ContributionChanges[keyof ContributionChanges];
   }
 
-  function decide(decision: "approved" | "rejected") {
+  async function decide(decision: "approved" | "rejected") {
     if (!selected) return;
     if (decision === "rejected" && !comment.trim()) return toast.error("拒绝时请填写审核意见");
-    const result = reviewContribution(selected.id, decision, comment.trim());
+    const result = await reviewContribution(selected.id, decision, comment.trim());
     if (!result.ok) return toast.error(result.message);
     toast.success(result.message);
     setComment("");
@@ -124,7 +124,7 @@ function ContributionReview() {
 }
 
 function ContributionQueueItem({ contribution, selected, onSelect }: { contribution: CardContribution; selected: boolean; onSelect: () => void }) {
-  const { state } = useDemoStore();
+  const { state } = useAppStore();
   const card = state.cards.find((item) => item.uuid === contribution.cardUuid);
   const contributor = state.users.find((user) => user.id === contribution.contributorId);
   return <button onClick={onSelect} className={cn("w-full rounded-card border p-3 text-left", selected ? "border-primary bg-surface" : "border-border bg-card hover:bg-surface/60")}><div className="flex items-center justify-between gap-2"><StatusContribution status={contribution.status} /><span className="text-[0.6rem] text-muted-foreground">{formatDate(contribution.createdAt)}</span></div><p className="mt-2 truncate font-serif text-sm font-bold">{card?.title ?? "卡片不存在"}</p><p className="mt-1 truncate text-[0.65rem] text-muted-foreground">{contributor?.displayName ?? "未知用户"} · {Object.keys(contribution.changes).length} 个字段</p></button>;

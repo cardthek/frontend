@@ -4,15 +4,19 @@ import Link from "next/link";
 import { ArrowUpRight, LockKeyhole } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CardPreview } from "@/components/cards/card-preview";
-import { useDemoStore, useDictionary } from "@/lib/demo-store";
+import { useAppStore, useDictionary } from "@/lib/app-store";
 import type { Card } from "@/lib/types";
 
 export function CardTile({ card, showStatus = false }: { card: Card; showStatus?: boolean }) {
-  const { state } = useDemoStore();
+  const { state } = useAppStore();
   const dictionary = useDictionary();
-  const cover = state.media.find((item) => item.uuid === card.coverMediaId);
-  const owner = state.users.find((user) => user.id === card.ownerId);
-  const canSeeGallery = state.settings.fieldDefaults.gallery.includes("guest");
+  const cover =
+    card.media?.find((item) => item.uuid === card.coverMediaId) ??
+    card.media?.[0] ??
+    state.media.find((item) => item.uuid === card.coverMediaId);
+  const owner =
+    card.owner ?? state.users.find((user) => user.id === card.ownerId);
+  const canSeeGallery = !card.galleryHidden;
   const meta = [dictionary(card.issuerId), card.releaseYear ? String(card.releaseYear) : null].filter(Boolean).join(" · ");
 
   return (

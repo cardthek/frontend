@@ -19,7 +19,8 @@ import { PageHeading } from "@/components/common/page-heading";
 import { StatCard } from "@/components/common/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useDemoStore, useDictionary } from "@/lib/demo-store";
+import { permissionCatalog } from "@/data/permissions";
+import { useAppStore, useDictionary } from "@/lib/app-store";
 import { themeName } from "@/lib/theme";
 import { formatDate } from "@/lib/utils";
 
@@ -32,7 +33,7 @@ export default function AdminDashboardPage() {
 }
 
 function Dashboard() {
-  const { state, currentUser, can } = useDemoStore();
+  const { state, currentUser, can } = useAppStore();
   const dictionary = useDictionary();
   const pending = state.cards.filter((card) => card.status === "pending");
   const published = state.cards.filter((card) => card.status === "published");
@@ -50,7 +51,7 @@ function Dashboard() {
       <PageHeading
         eyebrow="Studio Overview"
         title={`早上好，${currentUser?.displayName ?? "管理员"}`}
-        description="查看站点运行状态、待处理审核和最近的团队操作。所有数据来自当前演示会话。"
+        description="查看站点运行状态、待处理审核和最近的团队操作。数据实时来自 REST API。"
         actions={
           can("submissions.review") ? (
             <Button asChild><Link href="/admin/submissions">处理审核 <ArrowRight className="size-4" /></Link></Button>
@@ -117,11 +118,11 @@ function Dashboard() {
           <section className="rounded-card border border-border bg-surface/55 p-5 md:p-6">
             <div className="flex items-start gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card text-secondary"><Leaf className="size-4" /></span>
-              <div><p className="font-serif text-lg font-bold">演示环境</p><p className="mt-1 text-xs leading-5 text-muted-foreground">站点已初始化 · {state.settings.registrationMode === "open" ? "开放注册" : state.settings.registrationMode === "invite" ? "邀请注册" : "关闭注册"} · {state.settings.emailVerification ? "需要邮箱验证" : "无需邮箱验证"}</p></div>
+              <div><p className="font-serif text-lg font-bold">站点环境</p><p className="mt-1 text-xs leading-5 text-muted-foreground">站点已初始化 · {state.settings.registrationMode === "open" ? "开放注册" : state.settings.registrationMode === "invite" ? "邀请注册" : "关闭注册"} · {state.settings.emailVerification ? "需要邮箱验证" : "无需邮箱验证"}</p></div>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-ui bg-card p-3"><span className="text-muted-foreground">主题</span><p className="mt-1 font-semibold">{themeName(state.theme)}</p></div>
-              <div className="rounded-ui bg-card p-3"><span className="text-muted-foreground">权限节点</span><p className="mt-1 font-semibold">{state.roles.reduce((sum, role) => sum + role.permissions.length, 0)} 项</p></div>
+              <div className="rounded-ui bg-card p-3"><span className="text-muted-foreground">权限节点</span><p className="mt-1 font-semibold">{permissionCatalog.length} 项</p></div>
             </div>
           </section>
         </div>

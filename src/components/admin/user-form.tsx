@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import type { AdminUserInput, User } from "@/lib/types";
 import { formatDate, isNumericUsername, slugify } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ const tones: User["avatarTone"][] = ["sand", "sage", "clay", "forest"];
 
 export function AdminUserForm({ user }: { user?: User }) {
   const router = useRouter();
-  const { state, currentUser, createUser, saveUser, deleteUser, changePassword } = useDemoStore();
+  const { state, currentUser, createUser, saveUser, deleteUser, changePassword } = useAppStore();
   const [form, setForm] = useState<AdminUserInput>({
     username: user?.username ?? "",
     email: user?.email ?? "",
@@ -69,9 +69,13 @@ export function AdminUserForm({ user }: { user?: User }) {
     return null;
   }
 
-  function save() {
+  async function save() {
     const error = validate();
     if (error) return toast.error(error);
+    if (!user) {
+      if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) return toast.error("初始密码至少 8 个字符，并包含字母和数字");
+      if (password !== confirmPassword) return toast.error("两次输入的初始密码不一致");
+    }
     const input: AdminUserInput = {
       ...form,
       username: form.username.trim(),
@@ -81,10 +85,11 @@ export function AdminUserForm({ user }: { user?: User }) {
       bio: form.bio.trim(),
       roleIds: [selectedRoleId],
       joinedAt: new Date(`${form.joinedAt}T00:00:00.000Z`).toISOString(),
+      ...(!user ? { password } : {}),
     };
     setBusy(true);
     if (user) {
-      const result = saveUser(user.id, input);
+      const result = await saveUser(user.id, input);
       if (!result.ok) {
         setBusy(false);
         return toast.error(result.message);
@@ -92,7 +97,7 @@ export function AdminUserForm({ user }: { user?: User }) {
       toast.success(result.message);
       router.push("/admin/users");
     } else {
-      const result = createUser(input);
+      const result = await createUser(input);
       if (!result.ok) {
         setBusy(false);
         return toast.error(result.message);
@@ -103,12 +108,12 @@ export function AdminUserForm({ user }: { user?: User }) {
     setBusy(false);
   }
 
-  function updatePassword() {
+  async function updatePassword() {
     if (!user) return;
     if (password.length < 8) return toast.error("密码至少需要 8 个字符");
     if (password !== confirmPassword) return toast.error("两次输入的密码不一致");
     setPasswordBusy(true);
-    const result = changePassword(user.id, password);
+    const result = await changePassword(user.id, password);
     setPasswordBusy(false);
     if (!result.ok) return toast.error(result.message);
     setPassword("");
@@ -116,11 +121,11 @@ export function AdminUserForm({ user }: { user?: User }) {
     toast.success(result.message);
   }
 
-  function removeUser() {
+  async function removeUser() {
     if (!user) return;
     if (isSelf) return toast.error("不能删除当前登录账号");
     if (!window.confirm(`确定删除用户「${user.displayName}」吗？此操作无法撤销。`)) return;
-    const result = deleteUser(user.id);
+    const result = await deleteUser(user.id);
     if (!result.ok) return toast.error(result.message);
     toast.success(result.message);
     router.push("/admin/users");
@@ -147,7 +152,7 @@ export function AdminUserForm({ user }: { user?: User }) {
               <div><Label htmlFor="slug">公开主页 slug *</Label><Input id="slug" value={form.slug} onChange={(event) => { setSlugTouched(true); update("slug", event.target.value); }} placeholder="例如：lin-yu" /><p className="mt-2 text-[0.65rem] text-muted-foreground">公开地址：/u/{form.slug || "your-slug"}</p></div>
               <div className="sm:col-span-2"><Label htmlFor="bio">个人简介</Label><Textarea id="bio" value={form.bio} onChange={(event) => update("bio", event.target.value)} placeholder="介绍收藏偏好、研究主题或与卡片相关的经历。" /></div>
             </div>
-            <p className="mt-4 rounded-ui bg-surface px-4 py-3 text-xs leading-5 text-muted-foreground">演示模式不保存明文密码；新增用户后可直接在右下角切换身份进行体验。</p>
+            <p className="mt-4 rounded-ui bg-surface px-4 py-3 text-xs leading-5 text-muted-foreground">密码会由后端进行安全哈希存储；后台创建用户时必须设置初始密码。</p>
           </section>
 
           <section className="paper-panel p-5 md:p-7">
@@ -177,17 +182,11 @@ export function AdminUserForm({ user }: { user?: User }) {
 
           <section className="paper-panel p-5 md:p-7">
             <div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-full bg-surface text-secondary"><KeyRound className="size-4" /></span><div><p className="label-caps">Account Security</p><h2 className="mt-1 font-serif text-2xl font-bold">修改密码</h2></div></div>
-            {user ? (
-              <>
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div><Label htmlFor="newPassword">新密码</Label><Input id="newPassword" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="至少 8 个字符" autoComplete="new-password" /></div>
-                  <div><Label htmlFor="confirmPassword">确认新密码</Label><Input id="confirmPassword" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="再次输入新密码" autoComplete="new-password" /></div>
-                </div>
-                <div className="mt-4 flex flex-col gap-3 rounded-ui bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-5 text-muted-foreground">演示环境只记录密码更新时间，不保存明文或哈希。上次更新：{user.passwordUpdatedAt ? formatDate(user.passwordUpdatedAt, true) : "未记录"}</p><Button type="button" variant="outline" size="sm" onClick={updatePassword} disabled={passwordBusy}>{passwordBusy ? <LoaderCircle className="size-4 animate-spin" /> : <KeyRound className="size-4" />}更新密码</Button></div>
-              </>
-            ) : (
-              <p className="mt-5 rounded-ui bg-surface px-4 py-3 text-xs leading-5 text-muted-foreground">用户创建后，可在编辑页为其设置或修改密码。</p>
-            )}
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div><Label htmlFor="newPassword">{user ? "新密码" : "初始密码"}</Label><Input id="newPassword" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="至少 8 个字符" autoComplete="new-password" /></div>
+              <div><Label htmlFor="confirmPassword">确认密码</Label><Input id="confirmPassword" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="再次输入密码" autoComplete="new-password" /></div>
+            </div>
+            <div className="mt-4 flex flex-col gap-3 rounded-ui bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-5 text-muted-foreground">{user ? `修改密码会使该用户的其他会话失效。上次更新：${user.passwordUpdatedAt ? formatDate(user.passwordUpdatedAt, true) : "未记录"}` : "创建用户时会同时保存初始密码。"}</p>{user && <Button type="button" variant="outline" size="sm" onClick={() => void updatePassword()} disabled={passwordBusy}>{passwordBusy ? <LoaderCircle className="size-4 animate-spin" /> : <KeyRound className="size-4" />}更新密码</Button>}</div>
           </section>
 
           <div className="sticky bottom-4 z-10 flex flex-col-reverse gap-3 rounded-card border border-border bg-card/95 p-3 shadow-float backdrop-blur sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-2"><Button asChild variant="ghost"><Link href="/admin/users">取消</Link></Button>{user && <Button variant="ghost" onClick={removeUser} disabled={isSelf} className="text-destructive hover:bg-destructive/10"><Trash2 className="size-4" />删除用户</Button>}</div><Button onClick={save} disabled={busy}>{busy ? <LoaderCircle className="size-4 animate-spin" /> : <Save className="size-4" />}保存用户</Button></div>

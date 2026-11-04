@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Filter, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,20 +8,47 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { CardTile } from "@/components/cards/card-tile";
 import { EmptyState } from "@/components/common/empty-state";
-import { useDemoStore, useDictionary } from "@/lib/demo-store";
+import { useAppStore, useDictionary } from "@/lib/app-store";
+import { apiRequest, toApiError } from "@/lib/api-client";
 import { countryName } from "@/data/countries";
 import { currencyName } from "@/data/currencies";
+import type { Card } from "@/lib/types";
 
 export default function CardsPage() {
-  const { state } = useDemoStore();
+  const { state } = useAppStore();
   const dictionary = useDictionary();
+  const [cards, setCards] = useState<Card[]>(
+    state.cards.filter((card) => card.status === "published"),
+  );
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [network, setNetwork] = useState("all");
   const [country, setCountry] = useState("all");
   const [year, setYear] = useState("all");
   const [tag, setTag] = useState<string | null>(null);
 
-  const published = state.cards.filter((card) => card.status === "published");
+  useEffect(() => {
+    let active = true;
+    apiRequest<Card[]>("/cards?pageSize=100&sort=latest")
+      .then((payload) => {
+        if (active) {
+          setCards(payload.data);
+          setLoadError(null);
+        }
+      })
+      .catch((requestError) => {
+        if (active) setLoadError(toApiError(requestError).message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const published = cards;
   const networks = state.dictionaries.filter((item) => item.type === "network" && item.active);
   const countryCodes = [...new Set(published.map((card) => card.countryCode))].filter((code): code is string => Boolean(code)).sort();
   const countries = countryCodes.map((code) => ({ code, label: countryName(code) }));
@@ -107,7 +134,11 @@ export default function CardsPage() {
         <p className="text-sm text-muted-foreground">找到 {filtered.length} 张卡片</p>
       </div>
 
-      {filtered.length > 0 ? (
+      {loading ? (
+        <div className="mt-10 rounded-card border border-border bg-surface/45 p-10 text-center text-sm text-muted-foreground">正在读取卡片档案…</div>
+      ) : loadError ? (
+        <div className="mt-10 rounded-card border border-destructive/25 bg-destructive/8 p-10 text-center text-sm text-destructive">{loadError}</div>
+      ) : filtered.length > 0 ? (
         <div className="mt-6 grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((card) => <CardTile key={card.uuid} card={card} />)}
         </div>

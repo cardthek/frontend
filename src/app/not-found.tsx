@@ -10,7 +10,7 @@ export default function NotFound() {
       </span>
       <p className="label-caps mt-6">404 · Not Found</p>
       <h1 className="mt-3 font-serif text-4xl font-bold">这片叶子还没有长出来</h1>
-      <p className="mt-4 max-w-md text-sm leading-7 text-muted-foreground">你访问的页面不存在，或对应的卡片已经从演示档案中移除。</p>
+      <p className="mt-4 max-w-md text-sm leading-7 text-muted-foreground">你访问的页面不存在，或对应内容已经被移除。</p>
       <Button asChild className="mt-7"><Link href="/"><ArrowLeft className="size-4" />返回首页</Link></Button>
     </main>
   );

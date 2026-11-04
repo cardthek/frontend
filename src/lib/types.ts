@@ -55,6 +55,9 @@ export interface User {
   roleIds: string[];
   status: "active" | "suspended" | "deleted";
   joinedAt: string;
+  role?: Role;
+  permissions?: PermissionKey[];
+  cardCount?: number;
   passwordUpdatedAt?: string;
   deletedAt?: string;
 }
@@ -71,6 +74,7 @@ export interface AdminUserInput {
   roleIds: string[];
   status: User["status"];
   joinedAt: string;
+  password?: string;
 }
 
 export type DictionaryType = "issuer" | "network" | "cardType" | "level";
@@ -97,8 +101,9 @@ export interface MediaAsset {
   ownerId: number;
   createdAt: string;
   preview?: string;
-  tone: MediaTone;
-  pattern: MediaPattern;
+  tone?: MediaTone;
+  pattern?: MediaPattern;
+  url?: string;
 }
 
 export type CardStatus =
@@ -151,6 +156,8 @@ export interface Card {
   coverMediaId?: string;
   visibilityOverrides: Partial<FieldVisibility>;
   ownerId: number;
+  owner?: PublicUser | null;
+  contributors?: PublicUser[];
   status: CardStatus;
   featured: boolean;
   likeCount?: number;
@@ -162,6 +169,21 @@ export interface Card {
   submittedAt?: string;
   reviewComment?: string;
   reviewedBy?: number;
+  media?: MediaAsset[];
+  visibleFields?: CardField[];
+  galleryHidden?: boolean;
+  likedByCurrentUser?: boolean;
+  canEditVisibility?: boolean;
+}
+
+export interface PublicUser {
+  id: number;
+  uuid: string;
+  username: string | null;
+  displayName: string;
+  slug: string | null;
+  avatarTone: User["avatarTone"];
+  status: User["status"];
 }
 
 export interface ReviewRecord {
@@ -200,6 +222,12 @@ export interface CardContribution {
   reviewedBy?: number;
   reviewComment?: string;
   reviewedAt?: string;
+  cardTitle?: string;
+  contributor?: {
+    uuid: string;
+    displayName: string;
+    status?: User["status"];
+  };
 }
 
 export interface AuditLog {
@@ -213,6 +241,7 @@ export interface AuditLog {
 }
 
 export interface SiteSettings {
+  theme?: ThemeId;
   installed: boolean;
   siteName: string;
   tagline: string;
@@ -255,7 +284,7 @@ export interface AdminCardInput extends CardDraftInput {
   visibilityOverrides: Partial<FieldVisibility>;
 }
 
-export interface DemoState {
+export interface AppState {
   settings: SiteSettings;
   users: User[];
   roles: Role[];

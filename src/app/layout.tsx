@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
-import { DemoProvider } from "@/lib/demo-store";
-import { DemoController } from "@/components/demo/demo-controller";
+import { AppStoreProvider } from "@/lib/app-store";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,13 +16,12 @@ export const viewport: Viewport = {
   colorScheme: "light",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN" data-theme="natural" className="h-full antialiased" suppressHydrationWarning>
       <body className="flex min-h-full flex-col">
-        <DemoProvider>
+        <AppStoreProvider>
           {children}
-          <DemoController />
           <Toaster
             position="top-center"
             richColors
@@ -37,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               },
             }}
           />
-        </DemoProvider>
+        </AppStoreProvider>
       </body>
     </html>
   );

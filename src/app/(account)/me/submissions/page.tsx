@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CardPreview } from "@/components/cards/card-preview";
 import { StatusBadge, statusMap } from "@/components/cards/card-tile";
 import { EmptyState } from "@/components/common/empty-state";
-import { useDemoStore, useDictionary } from "@/lib/demo-store";
+import { useAppStore, useDictionary } from "@/lib/app-store";
 import type { CardStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ const filters: Array<{ value: "all" | CardStatus; label: string }> = [
 ];
 
 export default function SubmissionsPage() {
-  const { state, currentUser } = useDemoStore();
+  const { state, currentUser } = useAppStore();
   const dictionary = useDictionary();
   const [filter, setFilter] = useState<"all" | CardStatus>("all");
   if (!currentUser) return null;

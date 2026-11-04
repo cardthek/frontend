@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import type { PermissionKey } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +42,7 @@ const adminNav: Array<{
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { currentUser, can, state } = useDemoStore();
+  const { currentUser, can, state } = useAppStore();
   const visibleNav = adminNav.filter((item) => can(item.permission));
 
   return (
@@ -78,9 +78,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="mt-8 rounded-ui border border-border/70 bg-card/60 p-3">
-          <p className="text-[0.65rem] font-bold tracking-[0.13em] text-muted-foreground">演示模式</p>
+          <p className="text-[0.65rem] font-bold tracking-[0.13em] text-muted-foreground">权限提示</p>
           <p className="mt-2 text-xs leading-5 text-muted-foreground">
-            当前身份决定可见菜单与操作。可在右下角切换身份。
+            当前用户组决定可见菜单与可执行操作。
           </p>
         </div>
       </aside>
@@ -96,7 +96,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <span className="hidden text-sm font-semibold sm:inline">管理后台</span>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline">演示数据</Badge>
+            <Badge variant="outline">REST API</Badge>
             {currentUser && (
               <div className="flex items-center gap-2">
                 <Avatar name={currentUser.displayName} tone={currentUser.avatarTone} className="size-8" />

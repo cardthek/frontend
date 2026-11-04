@@ -5,6 +5,7 @@ import { CheckCircle2, Globe2, ImageIcon, Mail, Palette, Save, ShieldCheck } fro
 import { toast } from "sonner";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { PageHeading } from "@/components/common/page-heading";
+import { permissionCatalog } from "@/data/permissions";
 import { VisibilityEditor } from "@/components/submissions/visibility-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,9 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import { themeName } from "@/lib/theme";
-import type { FieldVisibility, SiteSettings } from "@/lib/types";
+import type { FieldVisibility, SiteSettings, ThemeId } from "@/lib/types";
 
 export default function AdminSettingsPage() {
   return (
@@ -25,32 +26,33 @@ export default function AdminSettingsPage() {
 }
 
 function SiteSettingsPage() {
-  const { state } = useDemoStore();
+  const { state } = useAppStore();
   return <SettingsForm key={JSON.stringify(state.settings)} />;
 }
 
 function SettingsForm() {
-  const { state, can, updateSettings } = useDemoStore();
+  const { state, can, updateSettings } = useAppStore();
   const canUpdate = can("settings.update");
-  const [form, setForm] = useState<SiteSettings>(() => structuredClone(state.settings));
+  const [form, setForm] = useState<SiteSettings>(() => ({ ...structuredClone(state.settings), theme: state.theme }));
   const [defaults, setDefaults] = useState<FieldVisibility>(() => structuredClone(state.settings.fieldDefaults));
 
   function patch<K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function save() {
+  async function save() {
     if (!canUpdate) return;
     if (!form.siteName.trim()) return toast.error("站点名称不能为空");
     if (form.maxImages < 1 || form.maxImages > 100) return toast.error("图片数量上限需在 1 到 100 之间");
     if (form.maxImageSizeMb < 1 || form.maxImageSizeMb > 100) return toast.error("单图大小上限需在 1 到 100 MB 之间");
-    updateSettings({ ...form, siteName: form.siteName.trim(), fieldDefaults: defaults });
-    toast.success("站点设置已保存");
+    const result = await updateSettings({ ...form, siteName: form.siteName.trim(), fieldDefaults: defaults });
+    if (!result.ok) return toast.error(result.message);
+    toast.success(result.message);
   }
 
   return (
     <div>
-      <PageHeading eyebrow="Site Configuration" title="站点设置" description="管理基础信息、注册策略、上传限制与字段默认可见性。主题由独立 CSS token 文件控制。" actions={canUpdate ? <Button onClick={save}><Save className="size-4" />保存设置</Button> : <Badge variant="outline">只读权限</Badge>} />
+      <PageHeading eyebrow="Site Configuration" title="站点设置" description="管理基础信息、注册策略、上传限制、主题与字段默认可见性。主题由独立 CSS token 文件控制。" actions={canUpdate ? <Button onClick={() => void save()}><Save className="size-4" />保存设置</Button> : <Badge variant="outline">只读权限</Badge>} />
 
       <div className="mt-7 grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-5">
@@ -60,6 +62,7 @@ function SettingsForm() {
               <label className="block"><span className="mb-2 block text-xs font-semibold">站点名称</span><Input value={form.siteName} onChange={(event) => patch("siteName", event.target.value)} disabled={!canUpdate} /></label>
               <label className="block"><span className="mb-2 block text-xs font-semibold">副标题</span><Input value={form.tagline} onChange={(event) => patch("tagline", event.target.value)} disabled={!canUpdate} /></label>
               <label className="block"><span className="mb-2 block text-xs font-semibold">站点介绍</span><Textarea value={form.description} onChange={(event) => patch("description", event.target.value)} disabled={!canUpdate} /></label>
+              <label className="block"><span className="mb-2 block text-xs font-semibold">界面主题</span><Select value={form.theme ?? state.theme} onChange={(event) => patch("theme", event.target.value as ThemeId)} disabled={!canUpdate}><option value="natural">自然手作</option><option value="editorial">植物图鉴</option><option value="corporate-clean">企业简洁</option></Select><span className="mt-2 block text-[0.65rem] leading-5 text-muted-foreground">主题只修改语义化 CSS token，不改变页面结构和业务逻辑。</span></label>
             </div>
           </section>
 
@@ -75,7 +78,7 @@ function SettingsForm() {
             <div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-full bg-surface text-secondary"><ImageIcon className="size-4" /></span><div><p className="label-caps">Uploads</p><h2 className="mt-1 font-serif text-2xl font-bold">图片限制</h2></div></div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <label className="block"><span className="mb-2 block text-xs font-semibold">每条投稿图片上限</span><Input type="number" min={1} max={100} value={form.maxImages} onChange={(event) => patch("maxImages", Number(event.target.value))} disabled={!canUpdate} /><span className="mt-2 block text-[0.65rem] text-muted-foreground">包含封面、正面、背面和细节图。</span></label>
-              <label className="block"><span className="mb-2 block text-xs font-semibold">单张图片大小上限（MB）</span><Input type="number" min={1} max={100} value={form.maxImageSizeMb} onChange={(event) => patch("maxImageSizeMb", Number(event.target.value))} disabled={!canUpdate} /><span className="mt-2 block text-[0.65rem] text-muted-foreground">仅模拟校验，不上传真实文件。</span></label>
+              <label className="block"><span className="mb-2 block text-xs font-semibold">单张图片大小上限（MB）</span><Input type="number" min={1} max={100} value={form.maxImageSizeMb} onChange={(event) => patch("maxImageSizeMb", Number(event.target.value))} disabled={!canUpdate} /><span className="mt-2 block text-[0.65rem] text-muted-foreground">后端上传接口会强制执行该限制。</span></label>
             </div>
           </section>
 
@@ -91,8 +94,8 @@ function SettingsForm() {
             <div className="mt-4 space-y-3 text-xs">
               <StatusRow label="安装状态" value={state.settings.installed ? "已完成" : "未安装"} />
               <StatusRow label="当前主题" value={themeName(state.theme)} />
-              <StatusRow label="权限节点" value={`${state.roles.reduce((sum, role) => sum + role.permissions.length, 0)} 项`} />
-              <StatusRow label="演示模式" value="内存数据" />
+              <StatusRow label="权限节点" value={`${permissionCatalog.length} 项`} />
+              <StatusRow label="数据存储" value="SQLite / Drizzle" />
             </div>
           </section>
 

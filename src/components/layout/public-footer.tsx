@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { Leaf } from "lucide-react";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 
 export function PublicFooter() {
-  const { state } = useDemoStore();
+  const { state } = useAppStore();
   return (
     <footer className="mt-auto border-t border-border/70 bg-surface/55">
       <div className="container-page grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
@@ -17,7 +17,7 @@ export function PublicFooter() {
             {state.settings.siteName}
           </div>
           <p className="mt-4 max-w-md text-sm leading-7 text-muted-foreground">
-            {state.settings.description}
+            {state.settings.description || state.settings.tagline}
           </p>
         </div>
         <div>
@@ -31,13 +31,13 @@ export function PublicFooter() {
         <div>
           <p className="label-caps mb-4">说明</p>
           <p className="text-sm leading-7 text-muted-foreground">
-            当前为纯前端演示。所有内容、账号与操作均为虚构，刷新页面后恢复初始状态。
+            这里只记录公开可见的银行卡卡面设计信息，不收集卡号、有效期、安全码或任何支付数据。
           </p>
         </div>
       </div>
       <div className="border-t border-border/60">
         <div className="container-page flex flex-col gap-2 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>© 2026 {state.settings.siteName} · Demo Edition</span>
+          <span>© 2026 {state.settings.siteName}</span>
           <span>仅记录公开卡面设计信息，不包含任何支付数据。</span>
         </div>
       </div>

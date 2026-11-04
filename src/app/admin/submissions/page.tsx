@@ -11,7 +11,7 @@ import { PageHeading } from "@/components/common/page-heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useDemoStore, useDictionary } from "@/lib/demo-store";
+import { useAppStore, useDictionary } from "@/lib/app-store";
 import type { CardStatus } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -28,7 +28,7 @@ export default function AdminSubmissionsPage() {
 }
 
 function ReviewQueue() {
-  const { state, can } = useDemoStore();
+  const { state, can } = useAppStore();
   const dictionary = useDictionary();
   const [filter, setFilter] = useState<"all" | CardStatus>("pending");
   const [query, setQuery] = useState("");
@@ -60,7 +60,7 @@ function ReviewQueue() {
       {cards.length ? (
         <div className="mt-5 grid gap-3 xl:grid-cols-2">
           {cards.map((card) => {
-            const cover = state.media.find((asset) => asset.uuid === card.coverMediaId);
+            const cover = card.media?.find((asset) => asset.uuid === card.coverMediaId) ?? card.media?.[0] ?? state.media.find((asset) => asset.uuid === card.coverMediaId);
             const owner = state.users.find((user) => user.id === card.ownerId);
             const canReview = can("submissions.review") && card.status === "pending";
             return (

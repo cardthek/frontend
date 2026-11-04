@@ -4,10 +4,10 @@ import Link from "next/link";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SubmissionForm } from "@/components/submissions/submission-form";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 
 export function EditSubmissionClient({ uuid }: { uuid: string }) {
-  const { state, currentUser, can } = useDemoStore();
+  const { state, currentUser, can } = useAppStore();
   const card = state.cards.find((item) => item.uuid === uuid);
 
   if (!card) {

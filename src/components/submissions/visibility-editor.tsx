@@ -2,7 +2,7 @@
 
 import { ChevronDown, RotateCcw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { visibilityLabel } from "@/lib/demo-store";
+import { visibilityLabel } from "@/lib/app-store";
 import type { CardField, FieldVisibility, Role, VisibilityPrincipal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 

@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import type { ContributionChanges, DictionaryType } from "@/lib/types";
 
 export function CardContributionClient({ uuid }: { uuid: string }) {
@@ -24,7 +24,7 @@ export function CardContributionClient({ uuid }: { uuid: string }) {
 
 function CardContributionForm({ uuid }: { uuid: string }) {
   const router = useRouter();
-  const { state, currentUser, createContribution } = useDemoStore();
+  const { state, currentUser, createContribution } = useAppStore();
   const card = state.cards.find((item) => item.uuid === uuid);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
@@ -92,7 +92,7 @@ function CardContributionForm({ uuid }: { uuid: string }) {
     return changes;
   }
 
-  function submit() {
+  async function submit() {
     if (!card) return;
     if (!form.title.trim() || !form.issuerId || !form.networkId || !form.cardTypeId) return toast.error("请填写标题并选择发行方、卡组织和卡片类型");
     if (form.bin.trim() && !/^\d{6,8}$/.test(form.bin.trim())) return toast.error("卡 BIN 需要填写 6–8 位数字");
@@ -105,7 +105,7 @@ function CardContributionForm({ uuid }: { uuid: string }) {
     const changes = buildChanges();
     if (!Object.keys(changes).length) return toast.error("没有检测到修改内容");
     setBusy(true);
-    const result = createContribution(card.uuid, changes, note);
+    const result = await createContribution(card.uuid, changes, note);
     setBusy(false);
     if (!result.ok) return toast.error(result.message);
     toast.success(result.message);

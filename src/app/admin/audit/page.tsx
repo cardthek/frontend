@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import { formatDate } from "@/lib/utils";
 
 const resourceLabels: Record<string, string> = {
@@ -32,7 +32,7 @@ export default function AdminAuditPage() {
 }
 
 function AuditLogPage() {
-  const { state } = useDemoStore();
+  const { state } = useAppStore();
   const [query, setQuery] = useState("");
   const [resource, setResource] = useState("all");
   const [action, setAction] = useState("all");
@@ -46,7 +46,7 @@ function AuditLogPage() {
 
   return (
     <div>
-      <PageHeading eyebrow="Audit Trail" title="审计日志" description="追踪内容、权限、用户与站点设置的关键操作。日志按时间倒序排列，演示数据刷新后重置。" actions={<Badge variant="outline"><ShieldCheck className="size-3" />{state.auditLogs.length} 条事件</Badge>} />
+      <PageHeading eyebrow="Audit Trail" title="审计日志" description="追踪内容、权限、用户与站点设置的关键操作。日志由后端持久化并按时间倒序排列。" actions={<Badge variant="outline"><ShieldCheck className="size-3" />{state.auditLogs.length} 条事件</Badge>} />
 
       <div className="mt-7 grid gap-3 rounded-card border border-border bg-surface/55 p-3 lg:grid-cols-[minmax(0,1fr)_11rem_13rem]">
         <label className="relative"><Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索详情、操作标识、资源 ID 或操作者" className="bg-card pl-10" /></label>

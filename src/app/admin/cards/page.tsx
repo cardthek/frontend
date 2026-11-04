@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { useDemoStore, useDictionary } from "@/lib/demo-store";
+import { useAppStore, useDictionary } from "@/lib/app-store";
 import { countryName } from "@/data/countries";
 import type { CardStatus } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
@@ -29,7 +29,7 @@ export default function AdminCardsPage() {
 }
 
 function CardManagement() {
-  const { state, can, setCardStatus, toggleFeatured, deleteCard } = useDemoStore();
+  const { state, can, setCardStatus, toggleFeatured, deleteCard } = useAppStore();
   const dictionary = useDictionary();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<CardStatus | "all">("all");
@@ -39,15 +39,23 @@ function CardManagement() {
     return haystack.includes(query.trim().toLowerCase()) && (status === "all" || card.status === status) && (!featuredOnly || card.featured);
   }), [dictionary, featuredOnly, query, state.cards, status]);
 
-  function changeStatus(uuid: string, next: "published" | "hidden") {
-    setCardStatus(uuid, next);
-    toast.success(next === "published" ? "卡片已发布" : "卡片已隐藏");
+  async function changeStatus(uuid: string, next: "published" | "hidden") {
+    try {
+      await setCardStatus(uuid, next);
+      toast.success(next === "published" ? "卡片已发布" : "卡片已隐藏");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "卡片状态更新失败");
+    }
   }
 
-  function remove(uuid: string, title: string) {
+  async function remove(uuid: string, title: string) {
     if (!window.confirm(`确定删除「${title}」吗？媒体文件不会被自动删除。`)) return;
-    deleteCard(uuid);
-    toast.success("卡片已删除");
+    try {
+      await deleteCard(uuid);
+      toast.success("卡片已删除");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "卡片删除失败");
+    }
   }
 
   return (
@@ -63,7 +71,7 @@ function CardManagement() {
       {cards.length ? (
         <div className="mt-5 space-y-2">
           {cards.map((card) => {
-            const cover = state.media.find((asset) => asset.uuid === card.coverMediaId);
+            const cover = card.media?.find((asset) => asset.uuid === card.coverMediaId) ?? card.media?.[0] ?? state.media.find((asset) => asset.uuid === card.coverMediaId);
             const owner = state.users.find((user) => user.id === card.ownerId);
             const meta = [
               dictionary(card.issuerId),
@@ -86,10 +94,10 @@ function CardManagement() {
                   <div className="flex flex-wrap items-center gap-2 border-t border-border/70 pt-3 xl:justify-end xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
                     {can("cards.update") && <Button asChild variant="outline" size="sm"><Link href={`/admin/cards/${card.uuid}/edit`}><Pencil className="size-4" />编辑</Link></Button>}
                     <Button asChild variant="ghost" size="sm"><Link href={`/cards/${card.uuid}`}><Eye className="size-4" />查看</Link></Button>
-                    {can("cards.publish") && card.status !== "published" && <Button variant="outline" size="sm" onClick={() => changeStatus(card.uuid, "published")}><Eye className="size-4" />发布</Button>}
-                    {can("cards.publish") && card.status === "published" && <Button variant="outline" size="sm" onClick={() => changeStatus(card.uuid, "hidden")}><EyeOff className="size-4" />隐藏</Button>}
-                    {can("cards.update") && <Button variant={card.featured ? "secondary" : "ghost"} size="sm" onClick={() => toggleFeatured(card.uuid)}><Star className="size-4" />{card.featured ? "取消精选" : "设为精选"}</Button>}
-                    {can("cards.update") && <Button variant="ghost" size="icon" onClick={() => remove(card.uuid, card.title)} aria-label="删除卡片" className="text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /></Button>}
+                    {can("cards.publish") && card.status !== "published" && <Button variant="outline" size="sm" onClick={() => void changeStatus(card.uuid, "published")}><Eye className="size-4" />发布</Button>}
+                    {can("cards.publish") && card.status === "published" && <Button variant="outline" size="sm" onClick={() => void changeStatus(card.uuid, "hidden")}><EyeOff className="size-4" />隐藏</Button>}
+                    {can("cards.update") && <Button variant={card.featured ? "secondary" : "ghost"} size="sm" onClick={async () => { try { await toggleFeatured(card.uuid); toast.success(card.featured ? "已取消精选" : "已设为精选"); } catch (error) { toast.error(error instanceof Error ? error.message : "精选状态更新失败"); } }}><Star className="size-4" />{card.featured ? "取消精选" : "设为精选"}</Button>}
+                    {can("cards.update") && <Button variant="ghost" size="icon" onClick={() => void remove(card.uuid, card.title)} aria-label="删除卡片" className="text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /></Button>}
                   </div>
                 </div>
               </article>

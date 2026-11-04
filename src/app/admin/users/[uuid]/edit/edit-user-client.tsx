@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { AdminUserForm } from "@/components/admin/user-form";
 import { Button } from "@/components/ui/button";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 
 export function EditUserClient({ uuid }: { uuid: string }) {
   return (
@@ -16,7 +16,7 @@ export function EditUserClient({ uuid }: { uuid: string }) {
 }
 
 function EditUserLookup({ uuid }: { uuid: string }) {
-  const { state } = useDemoStore();
+  const { state } = useAppStore();
   const user = state.users.find((item) => item.uuid === uuid && item.status !== "deleted");
 
   if (!user) {

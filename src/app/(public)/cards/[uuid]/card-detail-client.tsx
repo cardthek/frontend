@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, ExternalLink, EyeOff, Heart, Leaf, LockKeyhole, MessageSquarePlus, ShieldCheck, Tag } from "lucide-react";
 import { toast } from "sonner";
@@ -10,36 +10,100 @@ import { Button } from "@/components/ui/button";
 import { CardDownloadButton } from "@/components/cards/card-download-button";
 import { CardPreview } from "@/components/cards/card-preview";
 import { CardTile, StatusBadge } from "@/components/cards/card-tile";
-import { useDemoStore, useDictionary, visibilityLabel } from "@/lib/demo-store";
+import { useAppStore, useDictionary, visibilityLabel } from "@/lib/app-store";
+import { apiRequest, toApiError } from "@/lib/api-client";
 import { countryName } from "@/data/countries";
 import { currencyName } from "@/data/currencies";
 import { formatDate } from "@/lib/utils";
+import type { User } from "@/lib/types";
 
 export function CardDetailClient({ uuid }: { uuid: string }) {
-  const { state, currentUser, can, isFieldVisible, isProfileVisible, toggleLike } = useDemoStore();
+  const { state, currentUser, can, isFieldVisible, isProfileVisible, toggleLike } = useAppStore();
   const dictionary = useDictionary();
-  const card = state.cards.find((item) => item.uuid === uuid);
+  const storedCard = state.cards.find((item) => item.uuid === uuid);
+  const [card, setCard] = useState(storedCard);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeMediaId, setActiveMediaId] = useState(card?.coverMediaId ?? card?.mediaIds[0]);
+  useEffect(() => {
+    let active = true;
+    apiRequest(`/cards/${uuid}`)
+      .then((payload) => {
+        if (active) {
+          setCard(payload.data as typeof card);
+          setLoadError(null);
+        }
+      })
+      .catch((requestError) => {
+        if (active) setLoadError(toApiError(requestError).message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [currentUser?.id, uuid]);
 
   if (!card) {
     return (
       <div className="container-page py-24 text-center">
         <Leaf className="mx-auto size-8 text-secondary" />
-        <h1 className="mt-5 font-serif text-3xl font-bold">卡片不存在</h1>
-        <p className="mt-3 text-sm text-muted-foreground">它可能已经被移除，或链接地址有误。</p>
+        <h1 className="mt-5 font-serif text-3xl font-bold">{loadError ? "无法读取卡片" : "正在读取卡片…"}</h1>
+        <p className="mt-3 text-sm text-muted-foreground">{loadError ?? "正在从档案服务获取数据。"}</p>
         <Button asChild className="mt-6"><Link href="/cards">返回卡面档案</Link></Button>
       </div>
     );
   }
 
-  const owner = state.users.find((user) => user.id === card.ownerId);
-  const contributors = [owner, ...(card.contributorIds ?? []).map((id) => state.users.find((user) => user.id === id))]
-    .filter((user, index, users): user is NonNullable<typeof owner> => Boolean(user) && users.findIndex((candidate) => candidate?.id === user?.id) === index);
-  const liked = Boolean(currentUser && card.likedByUserIds?.includes(currentUser.id));
+  const owner =
+    state.users.find((user) => user.id === card.ownerId) ??
+    (card.owner
+      ? ({
+          id: card.owner.id,
+          uuid: card.owner.uuid,
+          username: card.owner.username ?? "",
+          email: "",
+          displayName: card.owner.displayName,
+          slug: card.owner.slug ?? "",
+          bio: "",
+          avatarTone: card.owner.avatarTone,
+          profileVisibility: "public",
+          showSubmissions: false,
+          roleIds: [],
+          status: card.owner.status,
+          joinedAt: "",
+        } satisfies User)
+      : null);
+  const contributors: User[] = card.contributors?.length
+    ? card.contributors.map((contributor) =>
+        state.users.find((user) => user.uuid === contributor.uuid) ??
+        ({
+          id: contributor.id,
+          uuid: contributor.uuid,
+          username: contributor.username ?? "",
+          email: "",
+          displayName: contributor.displayName,
+          slug: contributor.slug ?? "",
+          bio: "",
+          avatarTone: contributor.avatarTone,
+          profileVisibility: "public",
+          showSubmissions: false,
+          roleIds: [],
+          status: contributor.status,
+          joinedAt: "",
+        } satisfies User),
+      )
+    : [owner].filter((user): user is User => Boolean(user));
+  const liked = Boolean(
+    currentUser &&
+      (card.likedByCurrentUser ||
+        card.likedByUserIds?.includes(currentUser.id)),
+  );
   const privileged = can("cards.update") || can("submissions.review") || currentUser?.id === card.ownerId;
   const isPublic = card.status === "published";
   const canContribute = Boolean(isPublic && currentUser && currentUser.id !== card.ownerId);
-  const activeMedia = state.media.find((item) => item.uuid === activeMediaId) ?? state.media.find((item) => item.uuid === card.coverMediaId);
+  const activeMedia =
+    card.media?.find((item) => item.uuid === (activeMediaId ?? card.coverMediaId)) ??
+    card.media?.find((item) => item.uuid === card.coverMediaId) ??
+    state.media.find((item) => item.uuid === (activeMediaId ?? card.coverMediaId)) ??
+    state.media.find((item) => item.uuid === card.coverMediaId);
   const galleryVisible = isFieldVisible(card, "gallery");
   const related = state.cards.filter((item) => item.status === "published" && item.uuid !== card.uuid && (item.networkId === card.networkId || item.tags.some((tag) => card.tags.includes(tag)))).slice(0, 3);
   const hasDescription = Boolean(card.description?.trim());
@@ -60,10 +124,16 @@ export function CardDetailClient({ uuid }: { uuid: string }) {
   };
   const hiddenFields = (["issuer", "bin", "network", "cardType", "level", "country", "currency", "releaseYear", "tags", "description", "source"] as const).filter((field) => fieldHasValue[field] && !isFieldVisible(card, field));
 
-  function likeCard() {
-    const result = toggleLike(card!.uuid);
+  async function likeCard() {
+    const result = await toggleLike(card!.uuid);
     if (!result.ok) return toast.error(result.message);
-    toast.success(result.message);
+    try {
+      const payload = await apiRequest(`/cards/${card!.uuid}`);
+      setCard(payload.data as typeof card);
+      toast.success(result.message);
+    } catch (error) {
+      toast.error(toApiError(error).message);
+    }
   }
 
   if (!isPublic && !privileged) {
@@ -93,10 +163,12 @@ export function CardDetailClient({ uuid }: { uuid: string }) {
           {galleryVisible && card.mediaIds.length > 1 && (
             <div className="mt-3 grid grid-cols-4 gap-3">
               {card.mediaIds.map((mediaId) => {
-                const media = state.media.find((item) => item.uuid === mediaId);
+                const media =
+                  card.media?.find((item) => item.uuid === mediaId) ??
+                  state.media.find((item) => item.uuid === mediaId);
                 if (!media) return null;
                 return (
-                  <div key={mediaId} className={`relative rounded-ui border bg-transparent p-1 transition-colors ${activeMediaId === mediaId ? "border-primary" : "border-border"}`}>
+                  <div key={mediaId} className={`relative rounded-ui border bg-transparent p-1 transition-colors ${activeMedia?.uuid === mediaId ? "border-primary" : "border-border"}`}>
                     <CardPreview card={card} media={media} showLightbox={false} onActivate={() => setActiveMediaId(mediaId)} />
                     <CardDownloadButton card={card} media={media} compact className="absolute bottom-2 right-2 z-10" />
                   </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, EyeOff, LockKeyhole, Mail, Shield } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
@@ -7,46 +8,79 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardTile } from "@/components/cards/card-tile";
 import { EmptyState } from "@/components/common/empty-state";
-import { useDemoStore } from "@/lib/demo-store";
+import { apiRequest, toApiError } from "@/lib/api-client";
+import { useAppStore } from "@/lib/app-store";
+import type { Card, User } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
-export function ProfileClient({ slug }: { slug: string }) {
-  const { state, currentUser, isProfileVisible, can } = useDemoStore();
-  const profile = state.users.find((user) => user.slug === slug);
+interface PublicProfile {
+  id: number;
+  uuid: string;
+  username: string;
+  displayName: string;
+  slug: string;
+  bio: string;
+  avatarTone: User["avatarTone"];
+  profileVisibility: User["profileVisibility"];
+  showSubmissions: boolean;
+  joinedAt: string;
+  role: { id: string; name: string; slug: string };
+}
 
-  if (!profile) {
+interface ProfileResponse {
+  user: PublicProfile;
+  cards: Card[];
+}
+
+export function ProfileClient({ slug }: { slug: string }) {
+  const { currentUser, can } = useAppStore();
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    apiRequest<ProfileResponse>(`/profiles/${encodeURIComponent(slug)}`)
+      .then((payload) => {
+        if (!active) return;
+        setProfile(payload.data.user);
+        setCards(payload.data.cards);
+        setError(null);
+      })
+      .catch((requestError) => {
+        if (active) setError(toApiError(requestError).message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [currentUser?.id, slug]);
+
+  if (loading) {
+    return (
+      <div className="container-page py-24 text-center text-sm text-muted-foreground">
+        正在读取贡献者主页…
+      </div>
+    );
+  }
+
+  if (!profile || error) {
     return (
       <div className="container-page py-24 text-center">
-        <h1 className="font-serif text-3xl font-bold">用户不存在</h1>
+        <EyeOff className="mx-auto size-7 text-muted-foreground" />
+        <h1 className="mt-5 font-serif text-3xl font-bold">主页不存在或不可见</h1>
+        <p className="mt-3 text-sm text-muted-foreground">{error ?? "该用户可能已注销。"}</p>
         <Button asChild className="mt-6"><Link href="/">返回首页</Link></Button>
       </div>
     );
   }
 
-  if (profile.status === "deleted") {
-    return (
-      <div className="container-page flex min-h-[60vh] flex-col items-center justify-center py-20 text-center">
-        <span className="flex size-14 items-center justify-center rounded-full bg-surface text-muted-foreground"><EyeOff className="size-6" /></span>
-        <h1 className="mt-5 font-serif text-3xl font-bold">{profile.displayName}</h1>
-        <Button asChild variant="outline" className="mt-6"><Link href="/cards">浏览卡面档案</Link></Button>
-      </div>
-    );
-  }
-
-  if (!isProfileVisible(profile)) {
-    return (
-      <div className="container-page flex min-h-[60vh] flex-col items-center justify-center py-20 text-center">
-        <span className="flex size-14 items-center justify-center rounded-full bg-surface text-muted-foreground"><EyeOff className="size-6" /></span>
-        <h1 className="mt-5 font-serif text-3xl font-bold">这个主页没有公开</h1>
-        <p className="mt-3 max-w-md text-sm leading-7 text-muted-foreground">贡献者将主页可见范围设置为{profile.profileVisibility === "authenticated" ? "登录后可见" : "仅自己可见"}。请登录或切换演示身份后再试。</p>
-        <Button asChild variant="outline" className="mt-6"><Link href="/login">登录</Link></Button>
-      </div>
-    );
-  }
-
-  const isOwner = currentUser?.id === profile.id;
-  const canSeeSubmissions = profile.showSubmissions || isOwner || can("users.update");
-  const cards = state.cards.filter((card) => card.ownerId === profile.id && (card.status === "published" || isOwner || can("cards.update")));
+  const isOwner = currentUser?.uuid === profile.uuid;
+  const canSeeSubmissions =
+    profile.showSubmissions || isOwner || can("users.update");
 
   return (
     <div className="container-page py-10 md:py-16">
@@ -57,8 +91,8 @@ export function ProfileClient({ slug }: { slug: string }) {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="font-serif text-3xl font-bold md:text-4xl">{profile.displayName}</h1>
-                {profile.roleIds.includes("super-admin") && <Badge variant="secondary"><Shield className="size-3" />管理员</Badge>}
-                {profile.status === "suspended" && <Badge variant="destructive">已停用</Badge>}
+                {profile.role.id === "super-admin" && <Badge variant="secondary"><Shield className="size-3" />管理员</Badge>}
+                <Badge variant="outline">{profile.role.name}</Badge>
               </div>
               <p className="mt-1 font-mono text-xs text-muted-foreground">@{profile.username} · ID {profile.id}</p>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">{profile.bio}</p>
@@ -68,7 +102,7 @@ export function ProfileClient({ slug }: { slug: string }) {
         </div>
         <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 border-t border-border/70 pt-5 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5"><CalendarDays className="size-3.5" />加入于 {formatDate(profile.joinedAt)}</span>
-          {isOwner && <span className="flex items-center gap-1.5"><Mail className="size-3.5" />{profile.email}</span>}
+          {isOwner && <span className="flex items-center gap-1.5"><Mail className="size-3.5" />{currentUser?.email}</span>}
           {profile.profileVisibility !== "public" && <span className="flex items-center gap-1.5"><LockKeyhole className="size-3.5" />受限主页</span>}
         </div>
       </div>

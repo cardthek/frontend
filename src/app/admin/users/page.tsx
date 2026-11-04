@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import { formatDate } from "@/lib/utils";
 
 export default function AdminUsersPage() {
@@ -24,7 +24,7 @@ export default function AdminUsersPage() {
 }
 
 function UserManagement() {
-  const { state, currentUser, can, updateUser, deleteUser } = useDemoStore();
+  const { state, currentUser, can, updateUser, deleteUser } = useAppStore();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | "active" | "suspended">("all");
   const [roleId, setRoleId] = useState("all");
@@ -35,23 +35,27 @@ function UserManagement() {
   }), [query, roleId, state.users, status]);
   const visibleUserCount = state.users.filter((user) => user.status !== "deleted").length;
 
-  function toggleStatus(userId: number, nextStatus: "active" | "suspended", name: string) {
+  async function toggleStatus(userId: number, nextStatus: "active" | "suspended", name: string) {
     if (userId === currentUser?.id) {
-      toast.error("不能停用当前登录的演示账号");
+      toast.error("不能停用当前登录账号");
       return;
     }
     if (nextStatus === "suspended" && !window.confirm(`确定停用「${name}」吗？该账号将无法登录。`)) return;
-    updateUser(userId, { status: nextStatus });
-    toast.success(nextStatus === "active" ? "用户已启用" : "用户已停用");
+    try {
+      await updateUser(userId, { status: nextStatus });
+      toast.success(nextStatus === "active" ? "用户已启用" : "用户已停用");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "用户状态更新失败");
+    }
   }
 
-  function removeUser(userId: number, name: string) {
+  async function removeUser(userId: number, name: string) {
     if (userId === currentUser?.id) {
       toast.error("不能删除当前登录账号");
       return;
     }
     if (!window.confirm(`确定删除用户「${name}」吗？此操作无法撤销。`)) return;
-    const result = deleteUser(userId);
+    const result = await deleteUser(userId);
     if (!result.ok) return toast.error(result.message);
     toast.success(result.message);
   }

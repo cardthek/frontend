@@ -7,14 +7,14 @@ import { CardEditor } from "@/components/cards/card-editor";
 import { PageHeading } from "@/components/common/page-heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 
 export function ReviewEditClient({ uuid }: { uuid: string }) {
   return <AuthGuard permission="submissions.review"><ReviewEditLookup uuid={uuid} /></AuthGuard>;
 }
 
 function ReviewEditLookup({ uuid }: { uuid: string }) {
-  const { state } = useDemoStore();
+  const { state } = useAppStore();
   const card = state.cards.find((item) => item.uuid === uuid);
 
   if (!card) {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Download, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import { downloadCardFace } from "@/lib/download-card-face";
 import type { Card, MediaAsset } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,7 @@ export function CardDownloadButton({
   className?: string;
 }) {
   const [downloading, setDownloading] = useState(false);
-  const { recordCardDownload } = useDemoStore();
+  const { recordCardDownload } = useAppStore();
 
   async function handleDownload(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();

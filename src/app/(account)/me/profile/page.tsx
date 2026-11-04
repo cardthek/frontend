@@ -12,12 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { profileVisibilityLabel, useDemoStore } from "@/lib/demo-store";
+import { profileVisibilityLabel, useAppStore } from "@/lib/app-store";
 import type { ProfileVisibility } from "@/lib/types";
-import { isNumericUsername, slugify } from "@/lib/utils";
+import { slugify } from "@/lib/utils";
 
 export default function ProfilePage() {
-  const { currentUser, state, updateProfile } = useDemoStore();
+  const { currentUser, state, updateProfile } = useAppStore();
   const [form, setForm] = useState(() => ({
     displayName: currentUser?.displayName ?? "",
     username: currentUser?.username ?? "",
@@ -35,13 +35,18 @@ export default function ProfilePage() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  function save(event: React.FormEvent) {
+  async function save(event: React.FormEvent) {
     event.preventDefault();
-    if (isNumericUsername(form.username)) return toast.error("用户名不能是纯数字");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return toast.error("请输入有效邮箱");
     const slug = slugify(form.slug || form.username);
     if (!slug) return toast.error("请输入有效主页地址");
-    const result = updateProfile({ ...form, slug, email: form.email.trim().toLowerCase() });
+    const result = await updateProfile({
+      displayName: form.displayName,
+      slug,
+      bio: form.bio,
+      avatarTone: form.avatarTone,
+      profileVisibility: form.profileVisibility,
+      showSubmissions: form.showSubmissions,
+    });
     if (!result.ok) return toast.error(result.message);
     setForm((current) => ({ ...current, slug }));
     toast.success(result.message);
@@ -63,8 +68,8 @@ export default function ProfilePage() {
 
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             <div><Label htmlFor="displayName">显示名称</Label><Input id="displayName" value={form.displayName} onChange={(event) => update("displayName", event.target.value)} /></div>
-            <div><Label htmlFor="username">用户名</Label><div className="relative"><AtSign className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="username" value={form.username} onChange={(event) => update("username", event.target.value)} className="pl-10" /></div><p className="mt-1.5 text-[0.65rem] text-muted-foreground">不能是纯数字，可使用中文与字母。</p></div>
-            <div><Label htmlFor="email">邮箱</Label><Input id="email" type="email" value={form.email} onChange={(event) => update("email", event.target.value)} /></div>
+            <div><Label htmlFor="username">用户名</Label><div className="relative"><AtSign className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="username" value={form.username} disabled className="pl-10" /></div><p className="mt-1.5 text-[0.65rem] text-muted-foreground">用户名由管理员在用户编辑页修改。</p></div>
+            <div><Label htmlFor="email">邮箱</Label><Input id="email" type="email" value={form.email} disabled /><p className="mt-1.5 text-[0.65rem] text-muted-foreground">邮箱由管理员在用户编辑页修改。</p></div>
             <div><Label htmlFor="slug">主页地址</Label><div className="flex items-center rounded-pill border border-input bg-card pl-4"><span className="text-xs text-muted-foreground">/u/</span><input id="slug" value={form.slug} onChange={(event) => update("slug", event.target.value)} className="h-11 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none" /></div></div>
           </div>
 
@@ -93,8 +98,8 @@ export default function ProfilePage() {
           </div>
           <div className="rounded-card border border-border bg-card p-5">
             <p className="flex items-center gap-2 text-sm font-semibold"><KeyRound className="size-4 text-secondary" />账号安全</p>
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">正式版本将支持修改密码、邮箱验证与会话管理。当前演示不会保存任何凭据。</p>
-            <Button variant="outline" size="sm" className="mt-4 w-full" onClick={() => toast.info("密码修改将在后端接入后开放")}>修改密码</Button>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">密码通过后端接口安全更新，更新后其他会话会立即失效。</p>
+            <Button asChild variant="outline" size="sm" className="mt-4 w-full"><Link href="/forgot-password">修改密码</Link></Button>
           </div>
           <div className="rounded-card border border-border bg-card p-5">
             <p className="flex items-center gap-2 text-sm font-semibold"><UserRound className="size-4 text-secondary" />身份说明</p>

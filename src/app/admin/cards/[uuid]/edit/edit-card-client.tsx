@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { AdminCardForm } from "@/components/admin/card-form";
 import { Button } from "@/components/ui/button";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 
 export function EditCardClient({ uuid }: { uuid: string }) {
   return (
@@ -16,7 +16,7 @@ export function EditCardClient({ uuid }: { uuid: string }) {
 }
 
 function EditCardLookup({ uuid }: { uuid: string }) {
-  const { state } = useDemoStore();
+  const { state } = useAppStore();
   const card = state.cards.find((item) => item.uuid === uuid);
 
   if (!card) {

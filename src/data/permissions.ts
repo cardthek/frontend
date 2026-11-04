@@ -1,0 +1,25 @@
+import type { Permission } from "@/lib/types";
+
+export const permissionCatalog: Permission[] = [
+  { key: "dashboard.read", module: "概览", label: "查看仪表盘" },
+  { key: "cards.read", module: "卡片", label: "查看卡片" },
+  { key: "cards.create", module: "卡片", label: "创建卡片" },
+  { key: "cards.update", module: "卡片", label: "编辑卡片" },
+  { key: "cards.publish", module: "卡片", label: "发布与隐藏卡片" },
+  { key: "cards.visibility", module: "卡片", label: "管理字段可见性" },
+  { key: "submissions.read", module: "投稿", label: "查看投稿" },
+  { key: "submissions.create", module: "投稿", label: "创建投稿" },
+  { key: "submissions.updateOwn", module: "投稿", label: "编辑自己的投稿" },
+  { key: "submissions.review", module: "投稿", label: "审核投稿" },
+  { key: "submissions.bypassReview", module: "投稿", label: "投稿免审核" },
+  { key: "users.read", module: "用户", label: "查看用户" },
+  { key: "users.update", module: "用户", label: "管理用户" },
+  { key: "roles.read", module: "权限", label: "查看用户组" },
+  { key: "roles.update", module: "权限", label: "管理用户组与权限" },
+  { key: "dictionaries.manage", module: "字典", label: "管理字典" },
+  { key: "media.manage", module: "媒体", label: "管理媒体库" },
+  { key: "settings.read", module: "设置", label: "查看站点设置" },
+  { key: "settings.update", module: "设置", label: "修改站点设置" },
+  { key: "audit.read", module: "审计", label: "查看审计日志" },
+  { key: "profile.update", module: "个人", label: "编辑个人资料" },
+];

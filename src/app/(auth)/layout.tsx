@@ -15,7 +15,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </Link>
         {children}
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          当前为纯前端交互演示 · 刷新后恢复初始状态
+          卡迹账号与卡片数据由独立 REST API 服务提供
         </p>
       </div>
     </main>

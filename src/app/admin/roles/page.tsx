@@ -5,13 +5,13 @@ import { LockKeyhole, Plus, Save, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { PageHeading } from "@/components/common/page-heading";
-import { permissionCatalog } from "@/data/seed";
+import { permissionCatalog } from "@/data/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import type { PermissionKey, Role } from "@/lib/types";
 import { cn, slugify } from "@/lib/utils";
 
@@ -24,7 +24,7 @@ export default function AdminRolesPage() {
 }
 
 function RoleManagement() {
-  const { state, can, createRole, deleteRole } = useDemoStore();
+  const { state, can, createRole, deleteRole } = useAppStore();
   const [selectedId, setSelectedId] = useState(state.roles[0]?.id ?? "");
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
@@ -32,9 +32,9 @@ function RoleManagement() {
   const selected = state.roles.find((role) => role.id === selectedId) ?? state.roles[0];
   const canUpdate = can("roles.update");
 
-  function addRole() {
+  async function addRole() {
     if (!canUpdate) return;
-    const result = createRole(newName, newSlug, newDescription);
+    const result = await createRole(newName, newSlug, newDescription);
     if (!result.ok) return toast.error(result.message);
     setNewName("");
     setNewSlug("");
@@ -42,10 +42,10 @@ function RoleManagement() {
     toast.success(result.message);
   }
 
-  function removeRole() {
+  async function removeRole() {
     if (!selected || !canUpdate) return;
     if (!window.confirm(`确定删除用户组「${selected.name}」吗？`)) return;
-    const result = deleteRole(selected.id);
+    const result = await deleteRole(selected.id);
     if (!result.ok) return toast.error(result.message);
     setSelectedId(state.roles.find((role) => role.id !== selected.id)?.id ?? "");
     toast.success(result.message);
@@ -93,7 +93,7 @@ function RoleManagement() {
 }
 
 function RoleEditor({ role, canUpdate, onDelete }: { role: Role; canUpdate: boolean; onDelete: () => void }) {
-  const { state, updateRole } = useDemoStore();
+  const { state, updateRole } = useAppStore();
   const [name, setName] = useState(role.name);
   const [slug, setSlug] = useState(role.slug);
   const [description, setDescription] = useState(role.description);
@@ -105,14 +105,18 @@ function RoleEditor({ role, canUpdate, onDelete }: { role: Role; canUpdate: bool
     setPermissions((current) => current.includes(permission) ? current.filter((item) => item !== permission) : [...current, permission]);
   }
 
-  function save() {
+  async function save() {
     if (!canUpdate || locked) return;
     if (!name.trim()) return toast.error("用户组名称不能为空");
     const normalizedSlug = slugify(slug.trim() || name);
     if (!normalizedSlug) return toast.error("请填写有效用户组 slug");
     if (state.roles.some((candidate) => candidate.id !== role.id && candidate.slug.toLowerCase() === normalizedSlug.toLowerCase())) return toast.error("用户组 slug 已存在");
-    updateRole(role.id, { name: name.trim(), slug: normalizedSlug, description: description.trim(), permissions });
-    toast.success("用户组与权限节点已保存");
+    try {
+      await updateRole(role.id, { name: name.trim(), slug: normalizedSlug, description: description.trim(), permissions });
+      toast.success("用户组与权限节点已保存");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "用户组保存失败");
+    }
   }
 
   return (

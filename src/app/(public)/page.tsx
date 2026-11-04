@@ -6,14 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardPreview } from "@/components/cards/card-preview";
 import { CardTile } from "@/components/cards/card-tile";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 
 export default function HomePage() {
-  const { state, currentUser } = useDemoStore();
+  const { state, currentUser } = useAppStore();
   const published = state.cards.filter((card) => card.status === "published");
   const latest = [...published]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   const featured = latest.filter((card) => card.featured).slice(0, 3);
+  const curated = featured.length
+    ? featured
+    : latest.slice(0, 3);
   const recent = latest.slice(0, 4);
   const heroCards = [
     ...featured,
@@ -37,7 +40,7 @@ export default function HomePage() {
               收进一页<span className="organic-underline">植物图鉴</span>。
             </h1>
             <p className="mt-7 max-w-xl text-base leading-8 text-muted-foreground md:text-lg">
-              {state.settings.description}
+              {state.settings.description || state.settings.tagline}
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button asChild size="lg">
@@ -96,7 +99,7 @@ export default function HomePage() {
             </Button>
           </div>
           <div className="mt-10 grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((card) => <CardTile key={card.uuid} card={card} />)}
+            {curated.map((card) => <CardTile key={card.uuid} card={card} />)}
           </div>
         </div>
       </section>

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import type { Card, DictionaryItem, DictionaryType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +45,7 @@ export default function AdminDictionariesPage() {
 }
 
 function DictionaryManagement() {
-  const { state, addDictionaryItem, updateDictionaryItem, toggleDictionaryItem, removeDictionaryItem } = useDemoStore();
+  const { state, addDictionaryItem, updateDictionaryItem, toggleDictionaryItem, removeDictionaryItem } = useAppStore();
   const [type, setType] = useState<DictionaryType>("issuer");
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
@@ -64,10 +64,10 @@ function DictionaryManagement() {
     return state.cards.filter((card) => card[fieldByType[item.type]] === item.id).length;
   }
 
-  function add() {
+  async function add() {
     if (!label.trim()) return toast.error("请填写字典项名称");
     if (type === "level" && !parentId) return toast.error("请选择等级所属卡组织");
-    const result = addDictionaryItem({
+    const result = await addDictionaryItem({
       type,
       parentId: type === "level" ? parentId : undefined,
       label: label.trim(),
@@ -92,9 +92,9 @@ function DictionaryManagement() {
     });
   }
 
-  function saveEdit(item: DictionaryItem) {
+  async function saveEdit(item: DictionaryItem) {
     if (!editForm) return;
-    const result = updateDictionaryItem(item.id, {
+    const result = await updateDictionaryItem(item.id, {
       ...editForm,
       parentId: editForm.type === "level" ? editForm.parentId : undefined,
     });
@@ -104,7 +104,7 @@ function DictionaryManagement() {
     toast.success(result.message);
   }
 
-  function remove(item: DictionaryItem) {
+  async function remove(item: DictionaryItem) {
     const childLevels = item.type === "network"
       ? state.dictionaries.filter((candidate) => candidate.type === "level" && candidate.parentId === item.id).length
       : 0;
@@ -112,7 +112,7 @@ function DictionaryManagement() {
       ? `确定删除「${item.label}」吗？其下属 ${childLevels} 个卡片等级也会一并删除。`
       : `确定删除「${item.label}」吗？`;
     if (!window.confirm(message)) return;
-    const result = removeDictionaryItem(item.id);
+    const result = await removeDictionaryItem(item.id);
     if (!result.ok) return toast.error(result.message);
     toast.success(result.message);
   }
@@ -189,7 +189,7 @@ function DictionaryManagement() {
                           <p className="mt-1 truncate font-mono text-[0.62rem] text-muted-foreground">{item.id} · {item.slug}</p>
                           {item.description && <p className="mt-1 text-xs text-muted-foreground">{item.description}</p>}
                         </div>
-                        <div className="flex items-center gap-1 self-end sm:self-auto"><Switch checked={item.active} onCheckedChange={() => { toggleDictionaryItem(item.id); toast.success(item.active ? "字典项已停用" : "字典项已启用"); }} /><Button variant="ghost" size="icon" onClick={() => startEdit(item)} aria-label={`编辑 ${item.label}`}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" onClick={() => remove(item)} aria-label={`删除 ${item.label}`} className="text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /></Button></div>
+                        <div className="flex items-center gap-1 self-end sm:self-auto"><Switch checked={item.active} onCheckedChange={async () => { const result = await toggleDictionaryItem(item.id); if (!result.ok) return toast.error(result.message); toast.success(item.active ? "字典项已停用" : "字典项已启用"); }} /><Button variant="ghost" size="icon" onClick={() => startEdit(item)} aria-label={`编辑 ${item.label}`}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" onClick={() => void remove(item)} aria-label={`删除 ${item.label}`} className="text-destructive hover:bg-destructive/10"><Trash2 className="size-4" /></Button></div>
                       </div>
                     )}
                   </div>

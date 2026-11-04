@@ -8,14 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardPreview } from "@/components/cards/card-preview";
 import { StatusBadge } from "@/components/cards/card-tile";
-import { useDemoStore, useDictionary, visibilityLabel } from "@/lib/demo-store";
+import { useAppStore, useDictionary, visibilityLabel } from "@/lib/app-store";
 import { countryName } from "@/data/countries";
 import { currencyName } from "@/data/currencies";
 import { formatDate } from "@/lib/utils";
 
 export function SubmissionDetailClient({ uuid }: { uuid: string }) {
   const router = useRouter();
-  const { state, currentUser, can, submitCard, deleteCard } = useDemoStore();
+  const { state, currentUser, can, submitCard, deleteCard } = useAppStore();
   const dictionary = useDictionary();
   const card = state.cards.find((item) => item.uuid === uuid);
 
@@ -28,22 +28,30 @@ export function SubmissionDetailClient({ uuid }: { uuid: string }) {
     return <div className="py-20 text-center"><h1 className="font-serif text-3xl font-bold">无权查看这条投稿</h1><Button asChild className="mt-6"><Link href="/me/submissions">返回投稿列表</Link></Button></div>;
   }
 
-  const cover = state.media.find((media) => media.uuid === card.coverMediaId);
+  const cover = card.media?.find((media) => media.uuid === card.coverMediaId) ?? card.media?.[0] ?? state.media.find((media) => media.uuid === card.coverMediaId);
   const reviews = state.reviews.filter((review) => review.cardUuid === card.uuid);
   const canEdit = (isOwner && can("submissions.updateOwn")) || can("cards.update");
   const canSubmit = isOwner && ["draft", "changes_requested", "rejected", "hidden"].includes(card.status);
   const canBypassReview = can("submissions.bypassReview");
 
-  function submit() {
-    submitCard(card!.uuid);
-    toast.success(canBypassReview ? "投稿已自动发布" : "已重新提交审核");
+  async function submit() {
+    try {
+      await submitCard(card!.uuid);
+      toast.success(canBypassReview ? "投稿已自动发布" : "已重新提交审核");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "投稿提交失败");
+    }
   }
 
-  function remove() {
-    if (!window.confirm("确定删除这条演示投稿吗？此操作无法撤销。")) return;
-    deleteCard(card!.uuid);
-    toast.success("投稿已删除");
-    router.push("/me/submissions");
+  async function remove() {
+    if (!window.confirm("确定删除这条投稿吗？此操作无法撤销。")) return;
+    try {
+      await deleteCard(card!.uuid);
+      toast.success("投稿已删除");
+      router.push("/me/submissions");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "投稿删除失败");
+    }
   }
 
   return (
@@ -54,7 +62,7 @@ export function SubmissionDetailClient({ uuid }: { uuid: string }) {
         <div className="flex flex-wrap gap-2">
           {card.status === "published" && <Button asChild variant="outline"><Link href={`/cards/${card.uuid}`}><Eye className="size-4" />公开页面</Link></Button>}
           {canEdit && <Button asChild variant="outline"><Link href={`/me/submissions/${card.uuid}/edit`}><Pencil className="size-4" />编辑资料</Link></Button>}
-          {canSubmit && <Button onClick={submit}><Send className="size-4" />{canBypassReview ? "立即发布" : "提交审核"}</Button>}
+          {canSubmit && <Button onClick={() => void submit()}><Send className="size-4" />{canBypassReview ? "立即发布" : "提交审核"}</Button>}
         </div>
       </div>
 

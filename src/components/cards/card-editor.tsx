@@ -28,7 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import type {
   AdminCardInput,
   Card,
@@ -37,26 +37,12 @@ import type {
   DictionaryType,
   FieldVisibility,
   MediaAsset,
-  MediaPattern,
-  MediaTone,
 } from "@/lib/types";
 import { formatDate, formatFileSize } from "@/lib/utils";
 
 export type CardEditorMode = "submission" | "admin" | "review";
 
-const tones: MediaTone[] = ["sand", "sage", "clay", "forest", "ink"];
-const patterns: MediaPattern[] = ["orbit", "arch", "leaf", "lines", "wave"];
 const statuses: CardStatus[] = ["draft", "pending", "published", "changes_requested", "rejected", "hidden"];
-
-async function readImagePreview(file: File) {
-  return new Promise<string | undefined>((resolve) => {
-    if (!file.type.startsWith("image/")) return resolve(undefined);
-    const reader = new FileReader();
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : undefined);
-    reader.onerror = () => resolve(undefined);
-    reader.readAsDataURL(file);
-  });
-}
 
 interface CardEditorState {
   title: string;
@@ -89,8 +75,8 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
     updateCard,
     submitCard,
     reviewCard,
-    addMedia,
-  } = useDemoStore();
+    uploadMedia,
+  } = useAppStore();
   const [form, setForm] = useState<CardEditorState>(() => {
     const owner = state.users.find((user) => user.id === card?.ownerId) ?? currentUser;
     return {
@@ -159,18 +145,12 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
         toast.error(`${file.name} 超过 ${state.settings.maxImageSizeMb} MB`);
         continue;
       }
-      const index = state.media.length + added;
-      const assetName = file.name.replace(/\.[^.]+$/, "").trim() || file.name;
-      const asset = addMedia({
-        name: assetName,
-        mimeType: file.type || "image/webp",
-        size: file.size,
-        ownerId: currentUser.id,
-        tone: tones[index % tones.length],
-        pattern: patterns[index % patterns.length],
-        preview: await readImagePreview(file),
-      });
-      newAssets.push(asset);
+      const upload = await uploadMedia(file);
+      if (!upload.ok || !upload.asset) {
+        toast.error(`${file.name}: ${upload.message}`);
+        continue;
+      }
+      newAssets.push(upload.asset);
       added += 1;
     }
     if (newAssets.length) {
@@ -219,24 +199,32 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
     };
   }
 
-  function saveSubmission(forSubmit: boolean) {
+  async function saveSubmission(forSubmit: boolean) {
     if (!canEdit) return toast.error("当前投稿状态不可编辑");
     const error = validate(forSubmit);
     if (error) return toast.error(error);
     setBusy(true);
-    const input = buildInput();
-    const uuid = card?.uuid ?? createDraft(input).uuid;
-    if (card) {
-      updateCard(card.uuid, { ...input, visibilityOverrides: visibility });
-    } else {
-      updateCard(uuid, { visibilityOverrides: visibility });
+    try {
+      const input = buildInput();
+      const created = card ? null : await createDraft(input);
+      const uuid = card?.uuid ?? created!.uuid;
+      if (card) {
+        await updateCard(card.uuid, {
+          ...input,
+          ...(canManageVisibility ? { visibilityOverrides: visibility } : {}),
+        });
+      }
+      if (forSubmit) await submitCard(uuid);
+      toast.success(forSubmit ? (canBypassReview ? "投稿已自动发布" : "投稿已提交审核") : "草稿已保存");
+      router.push(`/me/submissions/${uuid}`);
+    } catch (saveError) {
+      toast.error(saveError instanceof Error ? saveError.message : "投稿保存失败");
+    } finally {
+      setBusy(false);
     }
-    if (forSubmit) submitCard(uuid);
-    toast.success(forSubmit ? (canBypassReview ? "投稿已自动发布" : "投稿已提交审核") : "草稿已保存");
-    router.push(`/me/submissions/${uuid}`);
   }
 
-  function saveAdmin() {
+  async function saveAdmin() {
     if (!canEdit) return toast.error("当前身份不能编辑卡片");
     const error = validate(false);
     if (error) return toast.error(error);
@@ -249,28 +237,42 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
       visibilityOverrides: visibility,
     };
     setBusy(true);
-    if (card) {
-      updateCard(card.uuid, input);
-      toast.success("卡片信息已保存");
-      router.push("/admin/cards");
-    } else {
-      const created = createCard(input);
-      toast.success("卡片已创建");
-      router.push(`/admin/cards/${created.uuid}/edit`);
+    try {
+      if (card) {
+        await updateCard(card.uuid, input);
+        toast.success("卡片信息已保存");
+        router.push("/admin/cards");
+      } else {
+        const created = await createCard(input);
+        toast.success("卡片已创建");
+        router.push(`/admin/cards/${created.uuid}/edit`);
+      }
+    } catch (saveError) {
+      toast.error(saveError instanceof Error ? saveError.message : "卡片保存失败");
+    } finally {
+      setBusy(false);
     }
   }
 
-  function saveReview() {
+  async function saveReview() {
     if (!card) return;
     const error = validate(false);
     if (error) return toast.error(error);
     setBusy(true);
-    updateCard(card.uuid, { ...buildInput(), visibilityOverrides: visibility });
-    toast.success("审核数据已保存");
-    setBusy(false);
+    try {
+      await updateCard(card.uuid, {
+        ...buildInput(),
+        ...(canManageVisibility ? { visibilityOverrides: visibility } : {}),
+      });
+      toast.success("审核数据已保存");
+    } catch (saveError) {
+      toast.error(saveError instanceof Error ? saveError.message : "审核数据保存失败");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function decide(decision: "approved" | "rejected" | "changes_requested") {
+  async function decide(decision: "approved" | "rejected" | "changes_requested") {
     if (!card) return;
     if (decision !== "approved" && !reviewComment.trim()) {
       return toast.error("拒绝或要求修改时，请填写审核意见");
@@ -278,10 +280,19 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
     const error = validate(decision === "approved");
     if (error) return toast.error(error);
     setBusy(true);
-    updateCard(card.uuid, { ...buildInput(), visibilityOverrides: visibility });
-    reviewCard(card.uuid, decision, reviewComment.trim() || "审核通过");
-    toast.success(decision === "approved" ? "数据已保存，投稿已通过并发布" : decision === "rejected" ? "投稿已拒绝" : "已要求投稿人修改");
-    router.push("/admin/submissions");
+    try {
+      await updateCard(card.uuid, {
+        ...buildInput(),
+        ...(canManageVisibility ? { visibilityOverrides: visibility } : {}),
+      });
+      await reviewCard(card.uuid, decision, reviewComment.trim() || "审核通过");
+      toast.success(decision === "approved" ? "数据已保存，投稿已通过并发布" : decision === "rejected" ? "投稿已拒绝" : "已要求投稿人修改");
+      router.push("/admin/submissions");
+    } catch (reviewError) {
+      toast.error(reviewError instanceof Error ? reviewError.message : "审核操作失败");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

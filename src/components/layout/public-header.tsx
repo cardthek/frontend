@@ -6,7 +6,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Files, Leaf, LogOut, Plus, Settings, Shield, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
-import { useDemoStore } from "@/lib/demo-store";
+import { useAppStore } from "@/lib/app-store";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -17,7 +17,7 @@ const navItems = [
 
 export function PublicHeader() {
   const pathname = usePathname();
-  const { state, currentUser, logout, can } = useDemoStore();
+  const { state, currentUser, logout, can } = useAppStore();
   const loginHref = pathname !== "/login" ? `/login?next=${encodeURIComponent(pathname)}` : "/login";
 
   return (
