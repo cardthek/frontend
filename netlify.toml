@@ -5,6 +5,8 @@
 [build.environment]
   NODE_VERSION = "22"
   NETLIFY_NEXT_PLUGIN_SKIP = "false"
+  # This is a public endpoint URL, not a credential.
+  SECRETS_SCAN_OMIT_KEYS = "BACKEND_ORIGIN"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

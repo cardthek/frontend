@@ -64,6 +64,7 @@ NEXT_PUBLIC_API_BASE_URL=/api/v1
 - 不要把它改成后端裸域名，否则刷新 Cookie 会变成跨站 Cookie，可能被浏览器拦截。
 - Netlify 域名应该配置在后台的 `CORS_ORIGINS` 中。
 - 后端必须使用 HTTPS，并设置 `COOKIE_SECURE=true`。
+- `BACKEND_ORIGIN` 是公开端点地址而不是密钥，因此 `netlify.toml` 只对该环境变量关闭秘密扫描；不要用同样方式绕过 JWT 密钥或访问令牌。
 
 修改环境变量后需要重新部署，因为 Netlify Function 的运行环境会在新部署中更新。
 
