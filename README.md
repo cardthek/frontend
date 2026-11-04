@@ -50,6 +50,8 @@ NEXT_PUBLIC_API_BASE_URL=/api/v1
 
 当前应用使用 Next.js Route Handler 代理后端，不能使用纯静态导出。Netlify 需要启用 Next.js Runtime，仓库已包含 `netlify.toml` 和 `@netlify/plugin-nextjs`。
 
+由于 `frontend` 是独立 Git 仓库，在 Netlify 中应直接导入该仓库，并将 **Base directory** 留空或填写 `./`。只有导入包含 `frontend` 与 `backend` 的 monorepo 时，才需要填写 `frontend`。
+
 在 Netlify 的 **Site configuration → Environment variables** 配置：
 
 ```env
