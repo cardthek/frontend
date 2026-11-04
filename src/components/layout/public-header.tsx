@@ -99,7 +99,7 @@ export function PublicHeader() {
               <Button asChild size="sm">
                 <Link href="/register">
                   <UserRound className="size-4" />
-                  加入卡迹
+                  加入 cardthek
                 </Link>
               </Button>
             </>

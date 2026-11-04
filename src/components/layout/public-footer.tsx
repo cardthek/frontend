@@ -24,7 +24,7 @@ export function PublicFooter() {
           <p className="label-caps mb-4">浏览</p>
           <div className="flex flex-col gap-2 text-sm text-muted-foreground">
             <Link href="/cards" className="hover:text-foreground">卡面档案</Link>
-            <Link href="/about" className="hover:text-foreground">关于卡迹</Link>
+            <Link href="/about" className="hover:text-foreground">关于 cardthek</Link>
             <Link href="/me/submissions/new" className="hover:text-foreground">提交卡片</Link>
           </div>
         </div>

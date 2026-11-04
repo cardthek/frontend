@@ -23,7 +23,7 @@ export default function SetupPage() {
   const router = useRouter();
   const { state, completeSetup, setTheme } = useAppStore();
   const [step, setStep] = useState(0);
-  const [siteName, setSiteName] = useState("卡迹");
+  const [siteName, setSiteName] = useState("cardthek");
   const [tagline, setTagline] = useState("把银行卡当作一页小小的设计档案");
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
@@ -64,7 +64,7 @@ export default function SetupPage() {
       <div className="hero-orbit -right-52 -top-52 size-[36rem] opacity-50" />
       <div className="container-page relative max-w-5xl">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-3 font-serif text-xl font-bold"><span className="flex size-9 items-center justify-center rounded-[45%_55%_48%_52%] bg-primary text-primary-foreground"><Leaf className="size-4" /></span>卡迹安装向导</Link>
+          <Link href="/" className="flex items-center gap-3 font-serif text-xl font-bold"><span className="flex size-9 items-center justify-center rounded-[45%_55%_48%_52%] bg-primary text-primary-foreground"><Leaf className="size-4" /></span>cardthek 安装向导</Link>
           {state.settings.installed && <Badge variant="warning">站点已安装</Badge>}
         </div>
 

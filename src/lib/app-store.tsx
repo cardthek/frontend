@@ -159,7 +159,7 @@ interface AppStoreValue {
 const defaultVisibility: Card["visibilityOverrides"] = {};
 const emptySettings: SiteSettings = {
   installed: false,
-  siteName: "卡迹",
+  siteName: "cardthek",
   tagline: "银行卡卡面档案",
   description: "",
   registrationMode: "open",
@@ -1047,7 +1047,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
         <div>
           <span className="mx-auto block size-8 animate-spin rounded-full border-2 border-border border-t-primary" />
-          <p className="mt-4 text-sm text-muted-foreground">正在连接卡迹服务…</p>
+          <p className="mt-4 text-sm text-muted-foreground">正在连接 cardthek 服务…</p>
         </div>
       </div>
     );

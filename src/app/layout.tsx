@@ -5,8 +5,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "卡迹 · 银行卡卡面档案",
-    template: "%s · 卡迹",
+    default: "cardthek · 银行卡卡面档案",
+    template: "%s · cardthek",
   },
   description: "由收藏者共同整理的银行卡卡面设计档案室。记录颜色、材质、发行年代与设计细节。",
 };

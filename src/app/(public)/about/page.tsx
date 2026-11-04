@@ -8,8 +8,8 @@ export default function AboutPage() {
       <div className="mx-auto max-w-3xl text-center">
         <span className="mx-auto flex size-14 rotate-[-4deg] items-center justify-center rounded-[45%_55%_48%_52%] bg-primary text-primary-foreground"><Leaf className="size-6" /></span>
         <p className="label-caps mt-6">About Card Archive</p>
-        <h1 className="mt-4 font-serif text-4xl font-bold leading-tight md:text-6xl">关于卡迹</h1>
-        <p className="mt-6 text-base leading-8 text-muted-foreground md:text-lg">卡迹是一个非商业的银行卡卡面设计档案项目。我们只记录公开可见的设计信息，不收集卡号、有效期、安全码或任何支付数据。</p>
+        <h1 className="mt-4 font-serif text-4xl font-bold leading-tight md:text-6xl">关于 cardthek</h1>
+        <p className="mt-6 text-base leading-8 text-muted-foreground md:text-lg">cardthek 是一个非商业的银行卡卡面设计档案项目。我们只记录公开可见的设计信息，不收集卡号、有效期、安全码或任何支付数据。</p>
       </div>
 
       <div className="mx-auto mt-14 grid max-w-5xl gap-5 md:grid-cols-2">

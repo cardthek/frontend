@@ -11,11 +11,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <span className="flex size-10 rotate-[-4deg] items-center justify-center rounded-[45%_55%_48%_52%] bg-primary text-primary-foreground">
             <Leaf className="size-5" />
           </span>
-          卡迹
+          cardthek
         </Link>
         {children}
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          卡迹账号与卡片数据由独立 REST API 服务提供
+          cardthek 账号与卡片数据由独立 REST API 服务提供
         </p>
       </div>
     </main>

@@ -44,7 +44,7 @@ export default function LoginPage() {
   return (
     <Card className="p-6 md:p-8">
       <p className="label-caps">Welcome Back</p>
-      <h1 className="mt-3 font-serif text-3xl font-bold">登录卡迹</h1>
+      <h1 className="mt-3 font-serif text-3xl font-bold">登录 cardthek</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">用户名或邮箱均可登录。登录状态通过短期访问令牌和 HttpOnly 刷新会话维持。</p>
 
       {currentUser ? (

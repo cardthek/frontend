@@ -43,7 +43,7 @@ export default function RegisterPage() {
   return (
     <Card className="p-6 md:p-8">
       <p className="label-caps">Join The Archive</p>
-      <h1 className="mt-3 font-serif text-3xl font-bold">加入卡迹</h1>
+      <h1 className="mt-3 font-serif text-3xl font-bold">加入 cardthek</h1>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">创建收藏者账号，记录并投稿银行卡卡面设计。</p>
 
       {closed ? (
