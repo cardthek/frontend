@@ -21,7 +21,7 @@ export function CardTile({ card, showStatus = false }: { card: Card; showStatus?
 
   return (
     <article className="group min-w-0">
-      <CardPreview card={card} media={cover} className="card-image-frame bg-surface">
+      <CardPreview card={card} media={cover} className="bg-surface">
         {!canSeeGallery && (
           <span className="absolute right-3 top-3 z-10 flex size-8 items-center justify-center rounded-full bg-background/85 text-muted-foreground backdrop-blur">
             <LockKeyhole className="size-3.5" />

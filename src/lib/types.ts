@@ -98,6 +98,8 @@ export interface MediaAsset {
   name: string;
   mimeType: string;
   size: number;
+  width?: number | null;
+  height?: number | null;
   ownerId: number;
   createdAt: string;
   preview?: string;

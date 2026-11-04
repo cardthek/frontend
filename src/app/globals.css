@@ -229,10 +229,16 @@ select {
 
 .card-face-container {
   position: relative;
-  width: 100%;
+  width: min(100%, calc(78svh * 85.6 / 53.98));
+  margin-inline: auto;
   /* ISO/IEC 7813 ID-1: 85.60mm × 53.98mm */
   aspect-ratio: 85.6 / 53.98;
   container-type: size;
+}
+
+.card-face-container--portrait {
+  width: min(100%, calc(78svh * 53.98 / 85.6));
+  aspect-ratio: 53.98 / 85.6;
 }
 
 .card-face {
@@ -248,10 +254,6 @@ select {
   border-radius: calc(min(var(--card-width), var(--card-height)) * 3.18 / 53.98);
   color: var(--art-line);
   box-shadow: var(--shadow-float);
-}
-
-.card-image-frame {
-  border-radius: 3.714% / 5.891%;
 }
 
 .card-face::after {
