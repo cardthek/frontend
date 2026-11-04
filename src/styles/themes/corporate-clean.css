@@ -1,0 +1,82 @@
+[data-theme="corporate-clean"] {
+  color-scheme: light;
+
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #1e40af;
+  --primary-foreground: #f8fafc;
+  --secondary: #2563eb;
+  --secondary-foreground: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #64748b;
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #2563eb;
+  --surface: #f1f5f9;
+  --surface-muted: #e2e8f0;
+  --surface-raised: #ffffff;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-active: #eff6ff;
+  --success: #059669;
+  --warning: #d97706;
+  --info: #0284c7;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-card: 0.75rem;
+  --radius-pill: 0.5rem;
+
+  --font-heading: Inter, "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-body: Inter, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05);
+  --shadow-float: 0 10px 24px rgb(15 23 42 / 0.10);
+  --texture-opacity: 0;
+
+  --art-sand: #e2e8f0;
+  --art-sage: #dbeafe;
+  --art-clay: #93c5fd;
+  --art-forest: #1e3a8a;
+  --art-ink: #1e293b;
+  --art-line: rgb(255 255 255 / 0.65);
+  --art-deep: #1e3a8a;
+}
+
+[data-theme="corporate-clean"] .hero-orbit {
+  display: none;
+}
+
+[data-theme="corporate-clean"] .display-title,
+[data-theme="corporate-clean"] .section-title {
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+[data-theme="corporate-clean"] .organic-underline::after {
+  right: 0;
+  bottom: -0.1em;
+  left: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--secondary) 72%, white);
+  transform: none;
+}
+
+[data-theme="corporate-clean"] [class*="45%_55%"] {
+  border-radius: 0.5rem !important;
+}
+
+[data-theme="corporate-clean"] [class*="rotate-[-4deg]"] {
+  transform: none !important;
+}

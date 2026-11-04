@@ -1,0 +1,55 @@
+:root,
+[data-theme="natural"] {
+  color-scheme: light;
+
+  --background: #faf6f1;
+  --foreground: #3d302b;
+  --card: #fffdf9;
+  --card-foreground: #3d302b;
+  --popover: #fffdf9;
+  --popover-foreground: #3d302b;
+  --primary: #5c4033;
+  --primary-foreground: #fffaf4;
+  --secondary: #8b9d77;
+  --secondary-foreground: #fffdf8;
+  --muted: #eee4d8;
+  --muted-foreground: #796a60;
+  --accent: #d4a373;
+  --accent-foreground: #3d302b;
+  --destructive: #a95d4b;
+  --destructive-foreground: #fff9f4;
+  --border: #ded1c2;
+  --input: #e5d9cc;
+  --ring: #8b9d77;
+  --surface: #f4ede5;
+  --surface-muted: #f0e7dc;
+  --surface-raised: #fffdf9;
+  --sidebar: #f4ede5;
+  --sidebar-foreground: #3d302b;
+  --sidebar-active: #e2e7d8;
+  --success: #657d58;
+  --warning: #aa7a3f;
+  --info: #6f857f;
+
+  --radius-sm: 0.6rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-card: 2rem;
+  --radius-pill: 9999px;
+
+  --font-heading: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+  --font-body: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: "SFMono-Regular", "JetBrains Mono", Consolas, monospace;
+
+  --shadow-card: 0 1px 2px rgb(92 64 51 / 0.05);
+  --shadow-float: 0 12px 32px rgb(92 64 51 / 0.12);
+  --texture-opacity: 0.035;
+
+  --art-sand: #e7d5bd;
+  --art-sage: #b7c2a4;
+  --art-clay: #c88f70;
+  --art-forest: #65745e;
+  --art-ink: #554b45;
+  --art-line: rgb(255 250 244 / 0.58);
+  --art-deep: #3e4b3b;
+}
