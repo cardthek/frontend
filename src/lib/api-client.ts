@@ -88,26 +88,36 @@ export async function apiRequest<T>(
     ...requestInit
   } = options;
   const isFormData = body instanceof FormData;
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...requestInit,
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      ...(body !== undefined && !isFormData
-        ? { "Content-Type": "application/json" }
-        : {}),
-      ...(auth && accessToken
-        ? { Authorization: `Bearer ${accessToken}` }
-        : {}),
-      ...headers,
-    },
-    body:
-      body === undefined
-        ? undefined
-        : isFormData
-          ? body
-          : JSON.stringify(body),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...requestInit,
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        ...(body !== undefined && !isFormData
+          ? { "Content-Type": "application/json" }
+          : {}),
+        ...(auth && accessToken
+          ? { Authorization: `Bearer ${accessToken}` }
+          : {}),
+        ...headers,
+      },
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? body
+            : JSON.stringify(body),
+    });
+  } catch (networkError) {
+    throw new ApiError(
+      0,
+      "NETWORK_ERROR",
+      "无法连接后端服务，请检查后端地址、网络连接或 CORS 配置",
+      networkError,
+    );
+  }
 
   if (
     response.status === 401 &&
