@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Copy, HardDrive, Pencil, Save, Search, Trash2, Upload, X } from "lucide-react";
+import Link from "next/link";
+import { Copy, HardDrive, Pencil, Save, ScanSearch, Search, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { CardPreview } from "@/components/cards/card-preview";
@@ -73,7 +74,7 @@ function MediaLibrary() {
 
   return (
     <div>
-      <PageHeading eyebrow="Media Assets" title="媒体库" description="上传真实卡面图片并维护名称与所有者。被卡片引用时禁止删除，UUID 创建后保持不变。" actions={<label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-pill bg-primary px-5 text-sm font-semibold text-primary-foreground"><Upload className="size-4" />上传图片<input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" multiple className="sr-only" onChange={uploadFiles} /></label>} />
+      <PageHeading eyebrow="Media Assets" title="媒体库" description="上传真实卡面图片并维护名称与所有者。上传文件会自动转为 WebP；被卡片引用时禁止删除，UUID 创建后保持不变。" actions={<><Button asChild variant="outline"><Link href="/admin/media/unreferenced"><ScanSearch className="size-4" />扫描未引用素材</Link></Button><label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-pill bg-primary px-5 text-sm font-semibold text-primary-foreground"><Upload className="size-4" />上传图片<input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" multiple className="sr-only" onChange={uploadFiles} /></label></>} />
 
       <div className="mt-7 grid gap-3 sm:grid-cols-3"><div className="paper-panel p-4"><p className="label-caps">资产总数</p><p className="mt-2 font-serif text-2xl font-bold">{state.media.length}</p></div><div className="paper-panel p-4"><p className="label-caps">占用空间</p><p className="mt-2 font-serif text-2xl font-bold">{formatFileSize(totalSize)}</p></div><div className="paper-panel p-4"><p className="label-caps">单图上限</p><p className="mt-2 font-serif text-2xl font-bold">{state.settings.maxImageSizeMb} MB</p></div></div>
 

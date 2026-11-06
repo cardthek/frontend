@@ -14,6 +14,7 @@ import {
   Images,
   Settings,
   ShieldCheck,
+  Trash2,
   Users,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
@@ -36,6 +37,7 @@ const adminNav: Array<{
   { href: "/admin/roles", label: "用户组与权限", icon: ShieldCheck, permission: "roles.read" },
   { href: "/admin/dictionaries", label: "字典", icon: BookOpen, permission: "dictionaries.manage" },
   { href: "/admin/media", label: "媒体库", icon: Images, permission: "media.manage" },
+  { href: "/admin/media/unreferenced", label: "未引用素材", icon: Trash2, permission: "media.manage" },
   { href: "/admin/settings", label: "站点设置", icon: Settings, permission: "settings.read" },
   { href: "/admin/audit", label: "审计日志", icon: History, permission: "audit.read" },
 ];
@@ -59,7 +61,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </Link>
         <nav className="space-y-1">
           {visibleNav.map((item) => {
-            const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
+            const active =
+              item.href === "/admin" || item.href === "/admin/media"
+                ? pathname === item.href
+                : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
