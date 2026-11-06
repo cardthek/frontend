@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -44,6 +44,19 @@ import { formatDate, formatFileSize } from "@/lib/utils";
 export type CardEditorMode = "submission" | "admin" | "review";
 
 const statuses: CardStatus[] = ["draft", "pending", "published", "changes_requested", "rejected", "hidden"];
+const supportedImageTypes = new Set([
+  "image/avif",
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+interface PendingMedia {
+  tempId: string;
+  file: File;
+  asset: MediaAsset;
+}
 
 interface CardEditorState {
   title: string;
@@ -101,9 +114,11 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
     };
   }
   const [form, setForm] = useState<CardEditorState>(initialForm);
+  const [pendingMedia, setPendingMedia] = useState<PendingMedia[]>([]);
   const [visibility, setVisibility] = useState<Partial<FieldVisibility>>(card?.visibilityOverrides ?? {});
   const [reviewComment, setReviewComment] = useState("");
   const [busy, setBusy] = useState(false);
+  const pendingMediaRef = useRef<PendingMedia[]>([]);
   const isAdmin = mode === "admin";
   const isReview = mode === "review";
   const isOwner = Boolean(card && currentUser?.id === card.ownerId);
@@ -116,14 +131,39 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
   const dictionaries = (type: DictionaryType) => state.dictionaries.filter((item) => item.type === type && item.active);
   const levels = dictionaries("level").filter((item) => item.parentId === form.networkId);
   const selectedMedia = form.mediaIds
-    .map((id) => state.media.find((asset) => asset.uuid === id))
+    .map((id) =>
+      state.media.find((asset) => asset.uuid === id) ??
+      pendingMedia.find((item) => item.tempId === id)?.asset,
+    )
     .filter((asset): asset is NonNullable<typeof asset> => Boolean(asset));
   const cover = selectedMedia.find((asset) => asset.uuid === form.coverMediaId) ?? selectedMedia[0];
   const submitter = state.users.find((user) => user.uuid === form.ownerUuid.trim().toLowerCase());
   const owner = state.users.find((user) => user.id === card?.ownerId);
 
+  useEffect(() => {
+    pendingMediaRef.current = pendingMedia;
+  }, [pendingMedia]);
+
+  useEffect(
+    () => () => {
+      for (const item of pendingMediaRef.current) {
+        URL.revokeObjectURL(item.asset.preview!);
+      }
+    },
+    [],
+  );
+
   function update<K extends keyof CardEditorState>(field: K, value: CardEditorState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function clearPendingMedia() {
+    setPendingMedia((current) => {
+      for (const item of current) {
+        URL.revokeObjectURL(item.asset.preview!);
+      }
+      return [];
+    });
   }
 
   function resetEditorState() {
@@ -131,23 +171,30 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
       setForm(initialForm());
       setVisibility(card?.visibilityOverrides ?? {});
       setReviewComment("");
+      clearPendingMedia();
     });
   }
 
   function removeMedia(uuid: string) {
+    const pending = pendingMedia.find((item) => item.tempId === uuid);
+    if (pending) {
+      URL.revokeObjectURL(pending.asset.preview!);
+      setPendingMedia((current) =>
+        current.filter((item) => item.tempId !== uuid),
+      );
+    }
     setForm((current) => {
       const mediaIds = current.mediaIds.filter((id) => id !== uuid);
       return { ...current, mediaIds, coverMediaId: current.coverMediaId === uuid ? mediaIds[0] : current.coverMediaId };
     });
   }
 
-  async function uploadFiles(event: React.ChangeEvent<HTMLInputElement>) {
+  function uploadFiles(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
     if (!files.length || !currentUser || !canEdit) return;
-    let added = 0;
-    const newAssets: MediaAsset[] = [];
+    const newAssets: PendingMedia[] = [];
     for (const file of files) {
-      if (form.mediaIds.length + added >= state.settings.maxImages) {
+      if (form.mediaIds.length + newAssets.length >= state.settings.maxImages) {
         toast.error(`最多选择 ${state.settings.maxImages} 张图片`);
         break;
       }
@@ -155,24 +202,40 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
         toast.error(`${file.name} 超过 ${state.settings.maxImageSizeMb} MB`);
         continue;
       }
-      const upload = await uploadMedia(file);
-      if (!upload.ok || !upload.asset) {
-        toast.error(`${file.name}: ${upload.message}`);
+      if (!supportedImageTypes.has(file.type)) {
+        toast.error(`${file.name}: 仅支持 JPEG、PNG、WebP、AVIF 与 GIF 图片`);
         continue;
       }
-      newAssets.push(upload.asset);
-      added += 1;
+      const tempId = `pending-${crypto.randomUUID()}`;
+      const name =
+        file.name.replace(/\.[^.]+$/, "").trim() || "未命名卡面";
+      newAssets.push({
+        tempId,
+        file,
+        asset: {
+          uuid: tempId,
+          name,
+          mimeType: file.type,
+          size: file.size,
+          ownerId: currentUser.id,
+          createdAt: new Date().toISOString(),
+          preview: URL.createObjectURL(file),
+        },
+      });
     }
     if (newAssets.length) {
+      setPendingMedia((current) => [...current, ...newAssets]);
       setForm((current) => ({
         ...current,
-        mediaIds: [...current.mediaIds, ...newAssets.map((asset) => asset.uuid)],
-        coverMediaId: current.coverMediaId ?? newAssets[0].uuid,
-        title: current.title.trim() ? current.title : newAssets[0].name,
+        mediaIds: [...current.mediaIds, ...newAssets.map((item) => item.tempId)],
+        coverMediaId: current.coverMediaId ?? newAssets[0].tempId,
+        title: current.title.trim() ? current.title : newAssets[0].asset.name,
       }));
     }
     event.target.value = "";
-    if (added) toast.success(`已上传 ${added} 张卡面图片`);
+    if (newAssets.length) {
+      toast.success(`已加入 ${newAssets.length} 张卡面，提交时会统一上传`);
+    }
   }
 
   function validate(forSubmit: boolean) {
@@ -190,7 +253,10 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
     return null;
   }
 
-  function buildInput(): CardDraftInput {
+  function buildInput(
+    mediaIds = form.mediaIds,
+    coverMediaId = form.coverMediaId ?? mediaIds[0],
+  ): CardDraftInput {
     return {
       title: form.title.trim(),
       bin: form.bin.trim() || undefined,
@@ -204,8 +270,54 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
       tags: form.tags.split(/[，,]/).map((tag) => tag.trim()).filter(Boolean),
       description: form.description.trim() || undefined,
       sourceUrl: form.sourceUrl.trim() || undefined,
-      mediaIds: form.mediaIds,
-      coverMediaId: form.coverMediaId ?? form.mediaIds[0],
+      mediaIds,
+      coverMediaId,
+    };
+  }
+
+  async function resolvePendingMedia() {
+    const replacements = new Map<string, MediaAsset>();
+    let failure: string | null = null;
+    for (const mediaId of form.mediaIds) {
+      const pending = pendingMedia.find((item) => item.tempId === mediaId);
+      if (!pending) continue;
+      const result = await uploadMedia(pending.file);
+      if (!result.ok || !result.asset) {
+        failure = `${pending.file.name}: ${result.message}`;
+        break;
+      }
+      replacements.set(mediaId, result.asset);
+    }
+
+    if (replacements.size) {
+      setForm((current) => ({
+        ...current,
+        mediaIds: current.mediaIds.map(
+          (mediaId) => replacements.get(mediaId)?.uuid ?? mediaId,
+        ),
+        coverMediaId: current.coverMediaId
+          ? replacements.get(current.coverMediaId)?.uuid ?? current.coverMediaId
+          : current.coverMediaId,
+      }));
+      setPendingMedia((current) =>
+        current.filter((item) => {
+          if (!replacements.has(item.tempId)) return true;
+          URL.revokeObjectURL(item.asset.preview!);
+          return false;
+        }),
+      );
+    }
+
+    if (failure) throw new Error(`图片上传失败：${failure}`);
+    const mediaIds = form.mediaIds.map(
+      (mediaId) => replacements.get(mediaId)?.uuid ?? mediaId,
+    );
+    const selectedCoverId = form.coverMediaId ?? mediaIds[0];
+    return {
+      mediaIds,
+      coverMediaId: selectedCoverId
+        ? replacements.get(selectedCoverId)?.uuid ?? selectedCoverId
+        : undefined,
     };
   }
 
@@ -215,7 +327,8 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
     if (error) return toast.error(error);
     setBusy(true);
     try {
-      const input = buildInput();
+      const media = await resolvePendingMedia();
+      const input = buildInput(media.mediaIds, media.coverMediaId);
       const created = card ? null : await createDraft(input);
       const uuid = card?.uuid ?? created!.uuid;
       if (card) {
@@ -244,15 +357,19 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
     const error = validate(false);
     if (error) return toast.error(error);
     if (!submitter) return toast.error("请输入有效的投稿者 UUID");
-    const input: AdminCardInput = {
-      ...buildInput(),
-      ownerId: submitter.id,
-      status: form.status,
-      featured: form.featured,
-      visibilityOverrides: visibility,
-    };
+    const inputBase = buildInput();
     setBusy(true);
     try {
+      const media = await resolvePendingMedia();
+      const input: AdminCardInput = {
+        ...inputBase,
+        mediaIds: media.mediaIds,
+        coverMediaId: media.coverMediaId,
+        ownerId: submitter.id,
+        status: form.status,
+        featured: form.featured,
+        visibilityOverrides: visibility,
+      };
       if (card) {
         await updateCard(card.uuid, input);
         toast.success("卡片信息已保存");
@@ -276,8 +393,9 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
     if (error) return toast.error(error);
     setBusy(true);
     try {
+      const media = await resolvePendingMedia();
       await updateCard(card.uuid, {
-        ...buildInput(),
+        ...buildInput(media.mediaIds, media.coverMediaId),
         ...(canManageVisibility ? { visibilityOverrides: visibility } : {}),
       });
       toast.success("审核数据已保存");
@@ -297,8 +415,9 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
     if (error) return toast.error(error);
     setBusy(true);
     try {
+      const media = await resolvePendingMedia();
       await updateCard(card.uuid, {
-        ...buildInput(),
+        ...buildInput(media.mediaIds, media.coverMediaId),
         ...(canManageVisibility ? { visibilityOverrides: visibility } : {}),
       });
       await reviewCard(card.uuid, decision, reviewComment.trim() || "审核通过");
@@ -366,10 +485,10 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
 
         <section className="rounded-card border border-border bg-card p-5 md:p-7">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="label-caps">Card Images</p><h2 className="mt-2 font-serif text-2xl font-bold">上传卡面</h2><p className="mt-1 text-xs text-muted-foreground">上传 1-{state.settings.maxImages} 张卡面图片，第一张默认作为封面。</p></div>
-            <label className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-pill bg-primary px-4 text-xs font-semibold text-primary-foreground"><Upload className="size-3.5" />上传卡面<input type="file" accept="image/*" multiple className="sr-only" onChange={uploadFiles} disabled={!canEdit} /></label>
+            <div><p className="label-caps">Card Images</p><h2 className="mt-2 font-serif text-2xl font-bold">上传卡面</h2><p className="mt-1 text-xs text-muted-foreground">选择 1-{state.settings.maxImages} 张卡面图片，提交时统一上传，第一张默认作为封面。</p></div>
+            <label className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-pill bg-primary px-4 text-xs font-semibold text-primary-foreground"><Upload className="size-3.5" />选择卡面<input type="file" accept="image/*" multiple className="sr-only" onChange={uploadFiles} disabled={!canEdit} /></label>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">已上传 {form.mediaIds.length} / {state.settings.maxImages} 张，单张上限 {state.settings.maxImageSizeMb} MB。</p>
+          <p className="mt-4 text-xs text-muted-foreground">已选择 {form.mediaIds.length} / {state.settings.maxImages} 张，单张上限 {state.settings.maxImageSizeMb} MB。图片会在保存或提交时统一上传。</p>
           {selectedMedia.length ? (
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {selectedMedia.map((asset) => (
@@ -381,7 +500,7 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
               ))}
             </div>
           ) : (
-            <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-card border border-dashed border-border px-5 py-10 text-center transition-colors hover:bg-surface/40"><Upload className="size-6 text-secondary" /><span className="mt-3 text-sm font-semibold">上传卡面图片</span><span className="mt-1 text-xs leading-5 text-muted-foreground">支持一次选择多张图片，第一张默认作为封面。</span><input type="file" accept="image/*" multiple className="sr-only" onChange={uploadFiles} disabled={!canEdit} /></label>
+            <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-card border border-dashed border-border px-5 py-10 text-center transition-colors hover:bg-surface/40"><Upload className="size-6 text-secondary" /><span className="mt-3 text-sm font-semibold">选择卡面图片</span><span className="mt-1 text-xs leading-5 text-muted-foreground">支持一次选择多张图片，提交时统一上传，第一张默认作为封面。</span><input type="file" accept="image/*" multiple className="sr-only" onChange={uploadFiles} disabled={!canEdit} /></label>
           )}
         </section>
 
