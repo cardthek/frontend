@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -77,7 +78,7 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
     reviewCard,
     uploadMedia,
   } = useAppStore();
-  const [form, setForm] = useState<CardEditorState>(() => {
+  function initialForm(): CardEditorState {
     const owner = state.users.find((user) => user.id === card?.ownerId) ?? currentUser;
     return {
       title: card?.title ?? "",
@@ -98,7 +99,8 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
       status: card?.status ?? "draft",
       featured: card?.featured ?? false,
     };
-  });
+  }
+  const [form, setForm] = useState<CardEditorState>(initialForm);
   const [visibility, setVisibility] = useState<Partial<FieldVisibility>>(card?.visibilityOverrides ?? {});
   const [reviewComment, setReviewComment] = useState("");
   const [busy, setBusy] = useState(false);
@@ -122,6 +124,14 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
 
   function update<K extends keyof CardEditorState>(field: K, value: CardEditorState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function resetEditorState() {
+    flushSync(() => {
+      setForm(initialForm());
+      setVisibility(card?.visibilityOverrides ?? {});
+      setReviewComment("");
+    });
   }
 
   function removeMedia(uuid: string) {
@@ -215,8 +225,13 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
         });
       }
       if (forSubmit) await submitCard(uuid);
+      if (!card) resetEditorState();
       toast.success(forSubmit ? (canBypassReview ? "投稿已自动发布" : "投稿已提交审核") : "草稿已保存");
-      router.push(`/me/submissions/${uuid}`);
+      if (card) {
+        router.push(`/me/submissions/${uuid}`);
+      } else {
+        router.replace(`/me/submissions/${uuid}`);
+      }
     } catch (saveError) {
       toast.error(saveError instanceof Error ? saveError.message : "投稿保存失败");
     } finally {
@@ -244,8 +259,9 @@ export function CardEditor({ mode, card }: { mode: CardEditorMode; card?: Card }
         router.push("/admin/cards");
       } else {
         const created = await createCard(input);
+        resetEditorState();
         toast.success("卡片已创建");
-        router.push(`/admin/cards/${created.uuid}/edit`);
+        router.replace(`/admin/cards/${created.uuid}/edit`);
       }
     } catch (saveError) {
       toast.error(saveError instanceof Error ? saveError.message : "卡片保存失败");
