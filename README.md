@@ -49,6 +49,91 @@ NEXT_PUBLIC_API_BASE_URL=/api/v1
 - `BACKEND_ORIGIN` 只在 Next.js 服务端使用。
 - `NEXT_PUBLIC_API_BASE_URL` 会进入浏览器构建产物。
 
+## 部署到 Cloudflare Workers
+
+本项目包含 `/api/v1/*` 和 `/uploads/*` 动态 Route Handler，因此应部署为 **Cloudflare Worker**，不要选择纯静态的 Pages 项目，也不要使用旧的 `@cloudflare/next-on-pages`。仓库已经接入当前推荐的 OpenNext Cloudflare 适配器：
+
+```text
+@opennextjs/cloudflare
+wrangler
+open-next.config.ts
+wrangler.jsonc
+```
+
+Worker 名称配置为 `cardthek`。默认使用 Worker 反向代理后端，避免浏览器跨站 Cookie 限制。
+
+Cloudflare 适配器当前不启用 Next.js 实验性的 Cache Components / Partial Prefetching；对应配置和路由级 `instant` 标记已移除，普通静态预渲染和动态 Route Handler 均正常。
+
+### 方式一：命令行部署
+
+```bash
+pnpm install --frozen-lockfile
+pnpm exec wrangler login
+pnpm deploy
+```
+
+部署前可在 `.env.local` 或当前 shell 中配置：
+
+```env
+NEXT_PUBLIC_USE_BACKEND_PROXY=true
+NEXT_PUBLIC_API_BASE_URL=/api/v1
+```
+
+`NEXT_PUBLIC_*` 会在构建时写入浏览器代码，修改后必须重新运行 `pnpm deploy`。
+
+本地 Worker 运行时预览：
+
+```bash
+cp .dev.vars.example .dev.vars
+pnpm preview
+```
+
+### 方式二：Cloudflare Workers Builds 连接 Git
+
+在 Cloudflare 控制台的 **Workers & Pages → Create → Workers → Connect to Git** 导入 `cardthek/frontend` 仓库，使用以下设置：
+
+```text
+Production branch: main
+Root directory: /
+Node.js version: 22
+Build command: pnpm exec opennextjs-cloudflare build
+Deploy command: pnpm exec wrangler deploy
+```
+
+在构建环境变量中配置：
+
+```env
+NODE_VERSION=22
+NEXT_PUBLIC_USE_BACKEND_PROXY=true
+NEXT_PUBLIC_API_BASE_URL=/api/v1
+```
+
+`BACKEND_ORIGIN=https://card.yurik.cafe` 已写入 `wrangler.jsonc` 的 `vars`。如果后端地址发生变化，应修改该文件并重新部署，不建议只在临时 shell 中修改。后端地址不是密钥。
+
+### 绑定自定义域名
+
+首次部署后会获得 `cardthek.<account>.workers.dev` 地址。进入 Worker 的 **Settings → Domains & Routes → Add custom domain** 绑定正式域名即可。
+
+### 使用浏览器直连模式
+
+不希望 Worker 代理 API 和图片时，在构建环境配置：
+
+```env
+NEXT_PUBLIC_USE_BACKEND_PROXY=false
+NEXT_PUBLIC_API_BASE_URL=https://card.yurik.cafe/api/v1
+```
+
+同时把 Worker 自定义域名加入后端 `CORS_ORIGINS`，并配置：
+
+```env
+COOKIE_SECURE=true
+COOKIE_SAME_SITE=none
+```
+
+直连模式下刷新 Cookie 属于第三方 Cookie，部分浏览器可能限制会话恢复，因此登录站点仍推荐 Worker 代理模式。
+
+当前不使用 Next.js ISR 页面缓存，所以基础配置不需要 R2。以后启用 ISR、`revalidateTag` 等服务端缓存时，再按 OpenNext 文档添加 `NEXT_INC_CACHE_R2_BUCKET` 和 Worker 自引用绑定。
+
 ## 部署到 Netlify
 
 当前应用使用 Next.js Route Handler 代理后端，不能使用纯静态导出。Netlify 需要启用 Next.js Runtime，仓库已包含 `netlify.toml` 和 `@netlify/plugin-nextjs`。

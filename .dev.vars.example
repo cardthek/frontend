@@ -1,0 +1,2 @@
+# Runtime-only backend origin used by the Worker proxy.
+BACKEND_ORIGIN=http://localhost:4000

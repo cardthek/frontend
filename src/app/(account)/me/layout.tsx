@@ -4,8 +4,6 @@ import { PublicFooter } from "@/components/layout/public-footer";
 import { AccountNav } from "@/components/account/account-nav";
 import { AuthGuard } from "@/components/auth/auth-guard";
 
-export const instant = false;
-
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">

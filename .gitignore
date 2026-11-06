@@ -16,6 +16,8 @@
 # next.js
 /.next/
 /out/
+/.open-next/
+/.wrangler/
 
 # production
 /build
@@ -35,6 +37,9 @@ yarn-error.log*
 !.env.example
 !.env.netlify.example
 !.env.direct.example
+!.env.cloudflare.example
+/.dev.vars*
+!/.dev.vars.example
 
 # vercel
 .vercel
